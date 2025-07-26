@@ -183,7 +183,7 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
 
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#F4A261" />
+                <ActivityIndicator size="large" color="#DDB15B" />
                 <Text style={styles.loadingText}>Loading...</Text>
               </View>
             ) : (
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
   },
   closeButton: {
     padding: 4,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveButton: {
-    backgroundColor: '#F4A261',
+    backgroundColor: '#DDB15B',
     borderRadius: 12,
     marginTop: 16,
   },

@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   vaultTitle: {
     fontSize: 32,
     fontFamily: FontFamilies.Saleha,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 24,
   },
   totalBalanceCard: {
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   totalBalanceAmount: {
     fontSize: 36,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 12,
     textAlign: 'center',
   },

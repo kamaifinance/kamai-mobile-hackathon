@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image } from "react-native";
 import { Text, Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
-import { LinearGradient } from 'expo-linear-gradient';
-import { LineChart } from 'react-native-gifted-charts';
-import MaskedView from '@react-native-masked-view/masked-view';
+import { LineChart } from "react-native-gifted-charts";
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -65,23 +63,9 @@ export function HomeScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.content}>
-        {/* Portfolio Title */}
-        <MaskedView
-          maskElement={
-            <Text style={styles.portfolioTitle}>
-              Portfolio
-            </Text>
-          }
-        >
-          <LinearGradient
-            colors={["#B37A35", "#F6D170", "#CD9227", "#B37A35"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={{ flex: 1 }}
-          >
-            <View style={{ flex: 1 }} />
-          </LinearGradient>
-        </MaskedView>
+        <Text style={styles.portfolioTitle}>
+          Portfolio
+        </Text>
 
         {/* Total Value Card */}
         <Card style={styles.totalValueCard}>
@@ -197,6 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontFamily: FontFamilies.Saleha,
     marginBottom: 24,
+    color: '#DDB15B',
   },
   totalValueCard: {
     backgroundColor: 'transparent',
@@ -222,7 +207,7 @@ const styles = StyleSheet.create({
   totalValueAmount: {
     fontSize: 40,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -382,7 +367,7 @@ const styles = StyleSheet.create({
   investmentAmount: {
     fontSize: 28,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 20,
   },
   cardBottomRow: {

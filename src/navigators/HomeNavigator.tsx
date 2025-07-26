@@ -49,7 +49,7 @@ const CustomTabBarButton = ({ onPress, accessibilityState, label, iconName, icon
         <MaterialCommunityIcon
           name={focused ? iconNameFocused : iconName}
           size={24}
-          color={focused ? "#F4A261" : "#5A8B7A"}
+          color={focused ? "#DDB15B" : "#5A8B7A"}
         />
         <Text
           style={{
@@ -80,7 +80,7 @@ export function HomeNavigator() {
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarShowLabel: false, // Hide default labels since we're using custom ones
-        tabBarActiveTintColor: "#F4A261", // Orange color for active text
+        tabBarActiveTintColor: "#DDB15B", // Orange color for active text
         tabBarInactiveTintColor: "#5A8B7A", // Teal color for inactive text
         tabBarStyle: {
           backgroundColor: "#041713", // Dark teal background

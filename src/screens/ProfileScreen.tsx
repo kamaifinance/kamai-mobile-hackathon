@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   profileTitle: {
     fontSize: 32,
     fontFamily: FontFamilies.Saleha,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 24,
   },
   profileCard: {
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 4,
     textAlign: 'center',
   },
@@ -363,11 +363,11 @@ const styles = StyleSheet.create({
   statContent: {
     padding: 16,
     alignItems: 'center',
-  },
+  },  
   statNumber: {
     fontSize: 28,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#F4A261',
+    color: '#DDB15B',
     marginBottom: 4,
   },
   statLabel: {
