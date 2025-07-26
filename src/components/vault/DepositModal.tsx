@@ -15,7 +15,7 @@ interface DepositModalProps {
   visible: boolean;
   vault: VaultInfo | null;
   onClose: () => void;
-  onDeposit: (vaultSymbol: string, amount: number) => Promise<string>;
+  onDeposit: (vault: VaultInfo, amount: number) => Promise<string>;
   loading?: boolean;
 }
 
@@ -40,7 +40,7 @@ export default function DepositModal({
 
     try {
       setDepositing(true);
-      const signature = await onDeposit(vault.vault, numAmount);
+      const signature = await onDeposit(vault, numAmount);
       
       Alert.alert(
         'Success!',

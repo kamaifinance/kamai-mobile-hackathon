@@ -15,10 +15,12 @@ import { useVaultService, VaultInfo, UserVaultBalance } from '../hooks/useVaultS
 import { useAuthorization } from '../utils/useAuthorization';
 import DepositModal from '../components/vault/DepositModal';
 import { FontFamilies } from '../styles/fonts';
+import { getVaultDetails } from '../utils/vaultService';
 
 export default function VaultsScreen() {
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [userBalances, setUserBalances] = useState<{ [key: string]: UserVaultBalance }>({});
+  const [vaultDetails, setVaultDetails] = useState<{ [key: string]: any }>({});
   const [loading, setLoading] = useState(true);
   const [depositing, setDepositing] = useState<string | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
@@ -42,8 +44,19 @@ export default function VaultsScreen() {
     try {
       setLoading(true);
       const availableVaults = await getVaults();
-      console.log('availableVaults', availableVaults);
-      setVaults(availableVaults);
+      // Only keep the three supported vaults in the correct order
+      const vaultOrder = ['SOL', 'USDC-Dev', 'mSOL'];
+      const filteredVaults = vaultOrder.map(symbol => availableVaults.find(v => v.tokenSymbol === symbol)).filter(Boolean);
+      setVaults(filteredVaults);
+      // Fetch vault details for each
+      const detailsObj: { [key: string]: any } = {};
+      for (const v of filteredVaults) {
+        if (v?.vault && v.vault?.tokenMint) {
+          const details = await getVaultDetails(v.vault, v.vault.tokenMint?.toBase58?.());
+          detailsObj[v.tokenSymbol] = details;
+        }
+      }
+      setVaultDetails(detailsObj);
     } catch (error) {
       console.error('Error loading vaults:', error);
       Alert.alert('Error', 'Failed to load vaults. Please try again.');
@@ -54,13 +67,17 @@ export default function VaultsScreen() {
 
   const loadUserBalances = async () => {
     if (!selectedAccount) return;
-    
     try {
-      const balance = await getUserVaultBalance();
+      const [solBalance, usdcDevBalance, msolBalance] = await Promise.all([
+        getUserVaultBalance('SOL'),
+        getUserVaultBalance('USDC-Dev'),
+        getUserVaultBalance('mSOL')
+      ]);
       setUserBalances({
-        'SOL': balance
+        'SOL': solBalance,
+        'USDC-Dev': usdcDevBalance,
+        'mSOL': msolBalance
       });
-      console.log('User vault balances loaded:', balance);
     } catch (error) {
       console.error('Error loading user balances:', error);
     }
@@ -71,15 +88,17 @@ export default function VaultsScreen() {
       Alert.alert('Error', 'Please connect your wallet first.');
       return;
     }
+    console.log('Vault:', vault.tokenSymbol);
 
     setSelectedVault(vault);
     setShowDepositModal(true);
   };
 
-  const handleDepositConfirm = async (vaultSymbol: string, amount: number): Promise<string> => {
-    try {
-      setDepositing(vaultSymbol);
-      const signature = await depositToVault(amount);
+  const handleDepositConfirm = async (vault: VaultInfo, amount: number): Promise<string> => {
+    try { 
+      setDepositing(vault.tokenSymbol);
+      console.log('Depositing to vault:', vault.tokenSymbol);
+      const signature = await depositToVault(amount, vault.tokenSymbol);
       await loadUserBalances();
       return signature;
     } catch (error) {
@@ -127,10 +146,12 @@ export default function VaultsScreen() {
     return require('../../assets/vault.png');
   };
 
-  const getVaultType = (vault: VaultInfo, index: number) => {
-    if (index === 0) return 'Boosted';
-    if (index === 2) return 'Protected'; 
-    return 'Vault';
+  // Helper to map vault type
+  const getVaultType = (symbol: string) => {
+    if (symbol === 'SOL') return 'Boosted';
+    if (symbol === 'USDC-Dev') return 'Protected';
+    if (symbol === 'mSOL') return 'Vault';
+    return symbol;
   };
 
   const getAmountColor = (amount: number) => {
@@ -143,6 +164,12 @@ export default function VaultsScreen() {
     const sign = amount >= 0 ? '+' : '';
     return `${sign}$${Math.abs(amount).toFixed(2)}`;
   };
+
+  // Aggregate total balance and APY
+  const totalBalance = vaults.reduce((sum: number, v: VaultInfo) => sum + (userBalances[v.tokenSymbol]?.withdrawableAmount || 0) * (vaultDetails[v.tokenSymbol]?.usd_rate || 1), 0);
+  // Weighted average APY by TVL
+  const totalTVL = vaults.reduce((sum: number, v: VaultInfo) => sum + (vaultDetails[v.tokenSymbol]?.total_amount_with_profit || 0) * (vaultDetails[v.tokenSymbol]?.usd_rate || 1), 0);
+  const weightedApy = totalTVL > 0 ? vaults.reduce((sum: number, v: VaultInfo) => sum + ((vaultDetails[v.tokenSymbol]?.total_amount_with_profit || 0) * (vaultDetails[v.tokenSymbol]?.usd_rate || 1) * (vaultDetails[v.tokenSymbol]?.closest_apy || 0)), 0) / totalTVL : 0;
 
   if (loading) {
     return (
@@ -158,80 +185,59 @@ export default function VaultsScreen() {
       <View style={styles.content}>
         {/* Vault Title */}
         <Text style={styles.vaultTitle}>Vault</Text>
-        
         {/* Total Balance Card */}
         <Card style={styles.totalBalanceCard}>
           <Card.Content style={styles.totalBalanceContent}>
             <Text style={styles.totalBalanceLabel}>Total Balance</Text>
-            <Text style={styles.totalBalanceAmount}>$12,485.92</Text>
+            <Text style={styles.totalBalanceAmount}>${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             <View style={styles.apyBadge}>
-                    <Text style={styles.apyText}>+2,45% today</Text>
+              <Text style={styles.apyText}>{weightedApy > 0 ? `+${weightedApy.toFixed(2)}% today` : 'N/A'}</Text>
             </View>
           </Card.Content>
         </Card>
-
         {/* Investments Section */}
         <Text style={styles.sectionTitle}>Investments</Text>
-        
         <View style={styles.investmentsList}>
-          {/* Sample investment items matching the design */}
-          <TouchableOpacity 
-            style={styles.investmentItem}
-            onPress={() => vaults.length > 0 && handleDeposit(vaults[0])}
-          >
-            <View style={styles.investmentLeft}>
-              <View style={[styles.iconContainer, styles.boostedIcon]}>
-                <MaterialCommunityIcon name="star" size={20} color="#F4A261" />
-              </View>
-              <View style={styles.investmentInfo}>
-                <Text style={styles.investmentName}>Boosted</Text>
-                <Text style={styles.investmentDate}>July 14th At 2:38PM</Text>
-              </View>
-            </View>
-            <Text style={[styles.investmentAmount, { color: '#FF6B6B' }]}>-$8.30</Text>
-          </TouchableOpacity>
-
           {vaults.map((vault, index) => {
             const userBalance = userBalances[vault.tokenSymbol];
-            const vaultType = getVaultType(vault, index);
+            const details = vaultDetails[vault.tokenSymbol];
+            const vaultType = getVaultType(vault.tokenSymbol);
             const iconSource = getVaultIcon(vaultType, index);
             const withdrawableAmount = userBalance?.withdrawableAmount || 0;
             const isProtected = vaultType === 'Protected';
-            
             return (
-              <TouchableOpacity 
-                key={vault.vault.toString()} 
+              <TouchableOpacity
+                key={vault.tokenSymbol}
                 style={styles.investmentItem}
                 onPress={() => handleDeposit(vault)}
               >
                 <View style={styles.investmentLeft}>
                   <View style={[
-                    styles.iconContainer, 
+                    styles.iconContainer,
                     isProtected ? styles.protectedIcon : styles.vaultIcon
                   ]}>
-                    <Image 
-                      source={iconSource} 
-                      style={{ width: 24, height: 24 }} 
-                      resizeMode="contain" 
+                    <Image
+                      source={iconSource}
+                      style={{ width: 24, height: 24 }}
+                      resizeMode="contain"
                     />
                   </View>
                   <View style={styles.investmentInfo}>
                     <Text style={styles.investmentName}>{vaultType}</Text>
-                    <Text style={styles.investmentDate}>July 14th At 2:38PM</Text>
+                    <Text style={styles.investmentDate}>APY: {details?.closest_apy ? `${details.closest_apy.toFixed(2)}%` : 'N/A'}</Text>
                   </View>
                 </View>
                 <Text style={[
-                  styles.investmentAmount, 
+                  styles.investmentAmount,
                   { color: getAmountColor(withdrawableAmount) }
                 ]}>
-                  {formatAmount(withdrawableAmount)}
+                  ${withdrawableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
       </View>
-
       <DepositModal
         visible={showDepositModal}
         vault={selectedVault}
