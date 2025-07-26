@@ -27,6 +27,35 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Saleha.ttf",
+            "./assets/fonts/Larken Bold Italic.ttf",
+            "./assets/fonts/Larken Bold.ttf",
+            "./assets/fonts/Larken Italic.ttf",
+            "./assets/fonts/Larken Light Italic.ttf",
+            "./assets/fonts/Larken Light.ttf",
+            "./assets/fonts/Larken Medium Italic.ttf",
+            "./assets/fonts/Larken Medium.ttf",
+            "./assets/fonts/Larken Regular.ttf",
+            "./assets/fonts/Larken Thin Italic.ttf",
+            "./assets/fonts/Larken Thin.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos to your device."
+        }
+      ]
+    ]
   }
 }

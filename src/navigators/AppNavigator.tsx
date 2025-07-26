@@ -49,7 +49,12 @@ const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
   return (
-    <Stack.Navigator initialRouteName={"Home"}>
+    <Stack.Navigator 
+      initialRouteName={"Home"}
+      screenOptions={{
+        contentStyle: { backgroundColor: 'transparent' }
+      }}
+    >
       <Stack.Screen
         name="HomeStack"
         component={HomeNavigator}
@@ -77,6 +82,7 @@ export const AppNavigator = (props: NavigationProps) => {
     colors: {
       ...MD3LightTheme.colors,
       ...LightTheme.colors,
+      background: 'transparent', // Make navigation background transparent
     },
   };
   const CombinedDarkTheme = {
@@ -85,6 +91,7 @@ export const AppNavigator = (props: NavigationProps) => {
     colors: {
       ...MD3DarkTheme.colors,
       ...DarkTheme.colors,
+      background: 'transparent', // Make navigation background transparent
     },
   };
 

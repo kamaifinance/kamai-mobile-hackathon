@@ -1,8 +1,11 @@
 // Polyfills
 import "./src/polyfills";
 
-import { StyleSheet, useColorScheme } from "react-native";
+import { StyleSheet, useColorScheme, ImageBackground } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useCallback } from 'react';
 
 import { ConnectionProvider } from "./src/utils/ConnectionProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,8 +24,47 @@ import { ClusterProvider } from "./src/components/cluster/cluster-data-access";
 
 const queryClient = new QueryClient();
 
+// Prevent auto-hiding splash screen
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
   const colorScheme = useColorScheme();
+  
+  // Load custom fonts
+  const [fontsLoaded, fontError] = useFonts({
+    // Saleha font
+    'Saleha': require('./assets/fonts/Saleha.ttf'),
+    
+    // Larken font variants
+    'Larken Regular': require('./assets/fonts/Larken Regular.ttf'),
+    'Larken Bold': require('./assets/fonts/Larken Bold.ttf'),
+    'Larken Bold Italic': require('./assets/fonts/Larken Bold Italic.ttf'),
+    'Larken Italic': require('./assets/fonts/Larken Italic.ttf'),
+    'Larken Light': require('./assets/fonts/Larken Light.ttf'),
+    'Larken Light Italic': require('./assets/fonts/Larken Light Italic.ttf'),
+    'Larken Medium': require('./assets/fonts/Larken Medium.ttf'),
+    'Larken Medium Italic': require('./assets/fonts/Larken Medium Italic.ttf'),
+    'Larken Thin': require('./assets/fonts/Larken Thin.ttf'),
+    'Larken Thin Italic': require('./assets/fonts/Larken Thin Italic.ttf'),
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  // Don't render the app if fonts haven't loaded and there's no error
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   const { LightTheme, DarkTheme } = adaptNavigationTheme({
     reactNavigationLight: NavigationDefaultTheme,
     reactNavigationDark: NavigationDarkTheme,
@@ -34,6 +76,7 @@ export default function App() {
     colors: {
       ...MD3LightTheme.colors,
       ...LightTheme.colors,
+      background: 'transparent', // Make navigation background transparent
     },
   };
   const CombinedDarkTheme = {
@@ -42,33 +85,39 @@ export default function App() {
     colors: {
       ...MD3DarkTheme.colors,
       ...DarkTheme.colors,
+      background: 'transparent', // Make navigation background transparent
     },
   };
+  
   return (
     <QueryClientProvider client={queryClient}>
       <ClusterProvider>
         <ConnectionProvider config={{ commitment: "processed" }}>
-          <SafeAreaView
-            style={[
-              styles.shell,
-              {
-                backgroundColor:
-                  colorScheme === "dark"
-                    ? MD3DarkTheme.colors.background
-                    : MD3LightTheme.colors.background,
-              },
-            ]}
+          <ImageBackground
+            source={require('./assets/kamai_mobile_bg.png')}
+            style={styles.backgroundImage}
+            resizeMode="cover"
           >
-            <PaperProvider
-              theme={
-                colorScheme === "dark"
-                  ? CombinedDarkTheme
-                  : CombinedDefaultTheme
-              }
+            <SafeAreaView
+              style={[
+                styles.shell,
+                {
+                  backgroundColor: 'transparent', // Make background transparent to show the image
+                },
+              ]}
+              onLayout={onLayoutRootView}
             >
-              <AppNavigator />
-            </PaperProvider>
-          </SafeAreaView>
+              <PaperProvider
+                theme={
+                  colorScheme === "dark"
+                    ? CombinedDarkTheme
+                    : CombinedDefaultTheme
+                }
+              >
+                <AppNavigator />
+              </PaperProvider>
+            </SafeAreaView>
+          </ImageBackground>
         </ConnectionProvider>
       </ClusterProvider>
     </QueryClientProvider>
@@ -77,6 +126,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   shell: {
+    flex: 1,
+  },
+  backgroundImage: {
     flex: 1,
   },
 });

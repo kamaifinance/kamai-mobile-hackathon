@@ -97,8 +97,8 @@ async function persistAuthorization(
 }
 
 export const APP_IDENTITY = {
-  name: "Solana Mobile Expo Template",
-  uri: "https://fakedomain.com",
+  name: "Kamai Finance",
+  uri: "https://kamai.finance"
 };
 
 export function useAuthorization() {
@@ -160,7 +160,7 @@ export function useAuthorization() {
       await wallet.deauthorize({ auth_token: authorization.authToken });
       await setAuthorization(null);
     },
-    [authorization]
+    [authorization] 
   );
   return useMemo(
     () => ({
@@ -170,6 +170,7 @@ export function useAuthorization() {
       deauthorizeSession,
       selectedAccount: authorization?.selectedAccount ?? null,
       isLoading,
+      authorization,
     }),
     [authorization, authorizeSession, deauthorizeSession]
   );
