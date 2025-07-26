@@ -84,6 +84,9 @@ values ('profile-images', 'profile-images', true);
 ### 4. Set Storage Policies
 
 ```sql
+-- Enable RLS on storage.objects
+alter table storage.objects enable row level security;
+
 -- Policy: Anyone can view profile images
 create policy "Anyone can view profile images" on storage.objects
   for select using (bucket_id = 'profile-images');
@@ -99,6 +102,9 @@ create policy "Anyone can update profile images" on storage.objects
 -- Policy: Anyone can delete profile images
 create policy "Anyone can delete profile images" on storage.objects
   for delete using (bucket_id = 'profile-images');
+
+-- Alternative: If you want to disable RLS completely for storage (less secure but simpler)
+-- alter table storage.objects disable row level security;
 ```
 
 ## Configuration Steps
@@ -161,7 +167,22 @@ const userData = await userService.upsertUser({
 
 ### Upload Profile Image
 ```typescript
-const imageUrl = await storageService.uploadProfileImage(imageUri, walletAddress);
+// For React Native, use base64 data from ImagePicker
+const result = await ImagePicker.launchImageLibraryAsync({
+  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  allowsEditing: true,
+  aspect: [1, 1],
+  quality: 0.8,
+  base64: true, // Important: enable base64
+});
+
+if (!result.canceled && result.assets[0].base64) {
+  const imageUrl = await storageService.uploadProfileImage(
+    result.assets[0].base64,
+    walletAddress,
+    'image/jpeg'
+  );
+}
 ```
 
 ## Architecture Overview
@@ -213,6 +234,35 @@ create policy "Restrict updates by wallet" on public.users
 2. **Storage Bucket**: Ensure the bucket exists and is public
 3. **Credentials**: Verify your Supabase URL and anon key are correct
 4. **Permissions**: Check that policies allow the operations you need
+
+### Storage Upload Issues
+
+If you get a "new row violates row-level security policy" error:
+
+1. **Check if RLS is enabled**: Run this in your Supabase SQL editor:
+   ```sql
+   select relname, relrowsecurity from pg_class where relname = 'objects';
+   ```
+
+2. **Verify storage policies exist**:
+   ```sql
+   select * from pg_policies where tablename = 'objects';
+   ```
+
+3. **Quick fix - Disable RLS for storage** (less secure but works immediately):
+   ```sql
+   alter table storage.objects disable row level security;
+   ```
+
+4. **Or create proper policies** (more secure):
+   ```sql
+   -- Enable RLS
+   alter table storage.objects enable row level security;
+   
+   -- Create policies for profile-images bucket
+   create policy "Public access to profile-images" on storage.objects
+     for all using (bucket_id = 'profile-images');
+   ```
 
 ### Error Handling
 

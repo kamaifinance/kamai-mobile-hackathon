@@ -3,6 +3,9 @@ import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image 
 import { Text, Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
 import { LineChart } from "react-native-gifted-charts";
+import { useVaultService, VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
+import { useAuthorization } from '../utils/useAuthorization';
+import { useNavigation } from '@react-navigation/native';
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -31,6 +34,90 @@ const portfolioData = generatePortfolioData();
 
 export function HomeScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState('Daily');
+  const [vaults, setVaults] = useState<VaultInfo[]>([]);
+  const [userBalances, setUserBalances] = useState<{ [key: string]: UserVaultBalance }>({});
+  const [vaultDetails, setVaultDetails] = useState<{ [key: string]: any }>({});
+  const [loading, setLoading] = useState(true);
+  const { selectedAccount } = useAuthorization();
+  const { getVaults, getUserVaultBalance } = useVaultService();
+  const navigation = useNavigation();
+
+  React.useEffect(() => {
+    loadVaults();
+  }, []);
+
+  React.useEffect(() => {
+    if (selectedAccount) {
+      loadUserBalances();
+    } else {
+      setUserBalances({});
+    }
+  }, [selectedAccount]);
+
+  const loadVaults = async () => {
+    try {
+      setLoading(true);
+      const availableVaults: VaultInfo[] = await getVaults();
+      // Only keep the three supported vaults in the correct order
+      const vaultOrder = ['SOL', 'USDC-Dev', 'mSOL'];
+      const filteredVaults: VaultInfo[] = vaultOrder.map(symbol => availableVaults.find(v => v.tokenSymbol === symbol)).filter(Boolean) as VaultInfo[];
+      setVaults(filteredVaults);
+      // Fetch vault details for each
+      const detailsObj: { [key: string]: any } = {};
+      for (const v of filteredVaults) {
+        if (v?.vault && v.vault?.tokenMint) {
+          // getVaultDetails is imported in VaultsScreen, but not here; skip details for now
+          // Optionally, you can import and fetch details if needed
+        }
+      }
+      setVaultDetails(detailsObj);
+    } catch (error) {
+      setVaults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserBalances = async () => {
+    if (!selectedAccount) return;
+    try {
+      const [solBalance, usdcDevBalance, msolBalance]: UserVaultBalance[] = await Promise.all([
+        getUserVaultBalance('SOL'),
+        getUserVaultBalance('USDC-Dev'),
+        getUserVaultBalance('mSOL')
+      ]);
+      setUserBalances({
+        'SOL': solBalance,
+        'USDC-Dev': usdcDevBalance,
+        'mSOL': msolBalance
+      });
+    } catch (error) {
+      setUserBalances({});
+    }
+  };
+
+  // Aggregate total balance
+  const totalBalance = vaults.reduce((sum: number, v: VaultInfo) => sum + (userBalances[v.tokenSymbol]?.withdrawableAmount || 0), 0);
+
+  // Helper to map vault type
+  const getVaultType = (symbol: string) => {
+    if (symbol === 'SOL') return 'Boosted';
+    if (symbol === 'USDC-Dev') return 'Protected';
+    if (symbol === 'mSOL') return 'Vault';
+    return symbol;
+  };
+
+  const getVaultIcon = (type: string, index: number) => {
+    if (type === 'Boosted' || index === 0) return require('../../assets/star.png');
+    if (type === 'Protected') return require('../../assets/shield.png');
+    return require('../../assets/vault.png');
+  };
+
+  const getAmountColor = (amount: number) => {
+    if (amount < 0) return '#FF6B6B';
+    if (amount > 0) return '#4CAF50';
+    return '#F4A261';
+  };
 
   const SimpleChart = () => (
     <View style={styles.chartContainer}>
@@ -66,19 +153,19 @@ export function HomeScreen() {
         <Text style={styles.portfolioTitle}>
           Portfolio
         </Text>
-
         {/* Total Value Card */}
         <Card style={styles.totalValueCard}>
           <Card.Content style={styles.totalValueContent}>
             <Text style={styles.totalValueLabel}>Total Value</Text>
-            <Text style={styles.totalValueAmount}>$12,485.92</Text>
+            <Text style={styles.totalValueAmount}>
+              ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
             <View style={styles.apyBadge}>
-              <Text style={styles.apyText}>+24.5% APY</Text>
+              <Text style={styles.apyText}>Aggregated</Text>
             </View>
-            <SimpleChart />
+            {/* Optionally keep the chart here */}
           </Card.Content>
         </Card>
-
         {/* Time Period Buttons */}
         <View style={styles.periodButtons}>
           {['Daily', 'Monthly', 'Yearly'].map((period) => (
@@ -99,7 +186,6 @@ export function HomeScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
         {/* Investments Section */}
         <Text style={styles.sectionTitle}>Investments</Text>
 
@@ -109,59 +195,52 @@ export function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.investmentCardsContainer}
         >
-          {/* Protected Card */}
-          <Card style={[styles.investmentCard, styles.protectedCard]}>
-            <ImageBackground
-              source={require('../../assets/vault_normal.png')}
-              style={styles.cardBackgroundImage}
-              resizeMode="cover"
-            >
-              <Card.Content style={styles.investmentCardContent}>
-                <View style={styles.investmentHeader}>
-                  <Text style={styles.investmentType}>Protected</Text>
-                  <Image
-                    source={require('../../assets/shield.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
-                  />
-                </View>
-                <Text style={styles.investmentAmount}>$0.00</Text>
-                <View style={styles.cardBottomRow}>
-                  <View style={styles.apyCardBadge}>
-                    <Text style={styles.apyCardValue}>4.06%</Text>
-                  </View>
-                  <Text style={styles.apyCardLabel}>APY (30days Avg.)</Text>
-                </View>
-              </Card.Content>
-            </ImageBackground>
-          </Card>
-
-          {/* Boosted Card */}
-          <Card style={[styles.investmentCard, styles.boostedCard]}>
-            <ImageBackground
-              source={require('../../assets/vault_boosted.png')}
-              style={styles.cardBackgroundImage}
-              resizeMode="cover"
-            >
-              <Card.Content style={styles.investmentCardContent}>
-                <View style={styles.investmentHeader}>
-                  <Text style={styles.investmentType}>Boosted</Text>
-                  <Image
-                    source={require('../../assets/star.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
-                  />
-                </View>
-                <Text style={styles.investmentAmount}>$0.00</Text>
-                <View style={styles.cardBottomRow}>
-                  <View style={styles.apyCardBadge}>
-                    <Text style={styles.apyCardValue}>4.06%</Text>
-                  </View>
-                  <Text style={styles.apyCardLabel}>APY (30days Avg.)</Text>
-                </View>
-              </Card.Content>
-            </ImageBackground>
-          </Card>
+          {vaults.map((vault: VaultInfo, index: number) => {
+            const userBalance = userBalances[vault.tokenSymbol];
+            const vaultType = getVaultType(vault.tokenSymbol);
+            const withdrawableAmount = userBalance?.withdrawableAmount || 0;
+            const isProtected = vaultType === 'Protected';
+            const isBoosted = vaultType === 'Boosted';
+            
+            return (
+              <TouchableOpacity
+                key={vault.tokenSymbol}
+                onPress={() => (navigation as any).navigate('Vault')}
+              >
+                <Card style={[
+                  styles.investmentCard, 
+                  isProtected ? styles.protectedCard : 
+                  isBoosted ? styles.boostedCard : styles.premiumCard
+                ]}>
+                  <ImageBackground
+                    source={isProtected ? require('../../assets/vault_normal.png') : require('../../assets/vault_boosted.png')}
+                    style={styles.cardBackgroundImage}
+                    resizeMode="cover"
+                  >
+                    <Card.Content style={styles.investmentCardContent}>
+                      <View style={styles.investmentHeader}>
+                        <Text style={styles.investmentType}>{vaultType}</Text>
+                        <Image
+                          source={getVaultIcon(vaultType, index)}
+                          style={{ width: 32, height: 32 }}
+                          resizeMode="contain"
+                        />
+                      </View>
+                      <Text style={styles.investmentAmount}>
+                        ${withdrawableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                      <View style={styles.cardBottomRow}>
+                        <View style={styles.apyCardBadge}>
+                          <Text style={styles.apyCardValue}>N/A</Text>
+                        </View>
+                        <Text style={styles.apyCardLabel}>APY (30days Avg.)</Text>
+                      </View>
+                    </Card.Content>
+                  </ImageBackground>
+                </Card>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
     </ScrollView>

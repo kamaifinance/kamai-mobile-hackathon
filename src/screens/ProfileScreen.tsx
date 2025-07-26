@@ -29,6 +29,7 @@ export function ProfileScreen() {
     try {
       setLoading(true);
       const data = await userService.getUserByWallet(selectedAccount.publicKey.toBase58());
+      console.log('User data:', data);
       setUserData(data);
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -80,11 +81,6 @@ export function ProfileScreen() {
     }
   };
 
-  const formatWalletAddress = (address: string) => {
-    if (address.length <= 8) return address;
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  };
-
   const getUserDisplayName = () => {
     // If user has a name in database, show it, otherwise show "Connected User"
     if (userData?.name) return userData.name;
@@ -95,7 +91,7 @@ export function ProfileScreen() {
   const getUserEmail = () => {
     // Email should show the wallet address (public key)
     if (selectedAccount) {
-      return "bhavya@gmail.com"
+      return userData?.email || 'Connect your wallet';
     }
     return 'Connect your wallet';
   };

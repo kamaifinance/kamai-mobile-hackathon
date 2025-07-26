@@ -23,7 +23,9 @@ interface PersonalInformationFormProps {
 
 export function PersonalInformationForm({ visible, onClose }: PersonalInformationFormProps) {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [profileImageBase64, setProfileImageBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { selectedAccount } = useAuthorization();
@@ -43,11 +45,15 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
       
       if (userData) {
         setName(userData.name || '');
+        setEmail(userData.email || '');
         setProfileImageUri(userData.profile_image || null);
+        setProfileImageBase64(null); // Reset base64 data
       } else {
         // Reset form for new user
         setName('');
+        setEmail('');
         setProfileImageUri(null);
+        setProfileImageBase64(null);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -66,16 +72,22 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
       return;
     }
 
-    // Launch image picker
+    // Launch image picker with base64
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1], // Square aspect ratio
       quality: 0.8,
+      base64: true, // Add base64 data
     });
 
     if (!result.canceled) {
       setProfileImageUri(result.assets[0].uri);
+      // Store base64 data for upload
+      if (result.assets[0].base64) {
+        setProfileImageBase64(result.assets[0].base64);
+      }
+      // Clear any existing stored image URL since we're uploading a new one
     }
   };
 
@@ -88,15 +100,21 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
       return;
     }
 
-    // Launch camera
+    // Launch camera with base64
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1], // Square aspect ratio
       quality: 0.8,
+      base64: true, // Add base64 data
     });
 
     if (!result.canceled) {
       setProfileImageUri(result.assets[0].uri);
+      // Store base64 data for upload
+      if (result.assets[0].base64) {
+        setProfileImageBase64(result.assets[0].base64);
+      }
+      // Clear any existing stored image URL since we're uploading a new one
     }
   };
 
@@ -112,6 +130,11 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
     );
   };
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSave = async () => {
     if (!selectedAccount) {
       Alert.alert('Error', 'No wallet connected. Please connect your wallet first.');
@@ -123,32 +146,39 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
       return;
     }
 
+    if (email.trim() && !validateEmail(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
+
     try {
       setSaving(true);
       
       let profileImageUrl = null;
       
-      // Upload profile image if selected and it's a new local image
-      if (profileImageUri && !profileImageUri.startsWith('http')) {
+      // Upload profile image if there's base64 data (new image selected)
+      if (profileImageBase64 && profileImageUri) {
         try {
           profileImageUrl = await storageService.uploadProfileImage(
-            profileImageUri,
-            selectedAccount.publicKey.toBase58()
+            profileImageBase64,
+            selectedAccount.publicKey.toBase58(),
+            'image/jpeg' // Default content type
           );
         } catch (uploadError) {
           console.error('Error uploading image:', uploadError);
           Alert.alert('Warning', 'Failed to upload image, but profile will be saved without it.');
         }
-      } else if (profileImageUri) {
-        // Keep existing image URL
+      } else if (profileImageUri && profileImageUri.startsWith('http')) {
+        // Keep existing image URL if no new image was selected
         profileImageUrl = profileImageUri;
       }
 
       // Save user data to Supabase database
       const userData: Omit<User, 'id' | 'created_at' | 'updated_at'> = {
         name: name.trim(),
+        email: email.trim() || undefined,
         wallet: selectedAccount.publicKey.toBase58(),
-        profile_image: profileImageUrl,
+        profile_image: profileImageUrl || undefined,
       };
 
       await userService.upsertUser(userData);
@@ -177,7 +207,7 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
             <View style={styles.header}>
               <Text style={styles.title}>Personal Information</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <MaterialCommunityIcon name="close" size={24} color="#FFFFFF" />
+                <MaterialCommunityIcon name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
 
@@ -193,7 +223,14 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
                   <Text style={styles.sectionTitle}>Profile Photo</Text>
                   <TouchableOpacity style={styles.imageContainer} onPress={showImagePicker}>
                     {profileImageUri ? (
-                      <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+                      <View style={styles.imageWrapper}>
+                        <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+                        {profileImageBase64 && profileImageUri && !profileImageUri.startsWith('http') && (
+                          <View style={styles.newImageIndicator}>
+                            <MaterialCommunityIcon name="upload" size={16} color="#fff" />
+                          </View>
+                        )}
+                      </View>
                     ) : (
                       <View style={styles.imagePlaceholder}>
                         <MaterialCommunityIcon name="camera-plus" size={32} color="#666" />
@@ -202,8 +239,10 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
                     )}
                   </TouchableOpacity>
                   <Text style={styles.imageHelpText}>
-                    {profileImageUri && profileImageUri.startsWith('http') 
-                      ? 'Image stored in Supabase Storage' 
+                    {profileImageBase64 && profileImageUri && !profileImageUri.startsWith('http')
+                      ? 'New image selected - save to upload'
+                      : profileImageUri && profileImageUri.startsWith('http')
+                      ? 'Tap to change your profile photo'
                       : 'Tap to add or change your profile photo'
                     }
                   </Text>
@@ -216,16 +255,40 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
                     value={name}
                     onChangeText={setName}
                     placeholder="Enter your full name"
-                    placeholderTextColor="#666"
+                    placeholderTextColor="#999"
                     style={styles.textInput}
                     theme={{
                       colors: {
-                        primary: '#F4A261',
-                        text: '#FFFFFF',
-                        placeholder: '#666',
+                        primary: '#DDB15B',
+                        text: '#333',
+                        placeholder: '#999',
                       }
                     }}
                   />
+                </View>
+
+                {/* Email Section */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.sectionTitle}>Email Address</Text>
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="Enter your email address (optional)"
+                    placeholderTextColor="#999"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={styles.textInput}
+                    theme={{
+                      colors: {
+                        primary: '#DDB15B',
+                        text: '#333',
+                        placeholder: '#999',
+                      }
+                    }}
+                  />
+                  <Text style={styles.helperText}>
+                    Email is optional but helps with account recovery and notifications
+                  </Text>
                 </View>
 
                 {/* Wallet Address Section (Read-only) */}
@@ -237,15 +300,15 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
                     style={[styles.textInput, styles.readOnlyInput]}
                     theme={{
                       colors: {
-                        primary: '#F4A261',
+                        primary: '#DDB15B',
                         text: '#666',
-                        placeholder: '#666',
+                        placeholder: '#999',
                       }
                     }}
                     right={
                       <TextInput.Icon
                         icon={() => (
-                          <MaterialCommunityIcon name="wallet" size={20} color="#F4A261" />
+                          <MaterialCommunityIcon name="wallet" size={20} color="#DDB15B" />
                         )}
                       />
                     }
@@ -283,7 +346,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
@@ -291,7 +354,7 @@ const styles = StyleSheet.create({
   modal: {
     width: '90%',
     maxHeight: '85%',
-    backgroundColor: '#2A5A47',
+    backgroundColor: 'white',
     borderRadius: 16,
   },
   content: {
@@ -306,7 +369,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontFamily: FontFamilies.Larken.Bold,
-    color: '#DDB15B',
+    color: '#333',
   },
   closeButton: {
     padding: 4,
@@ -319,7 +382,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontFamily: FontFamilies.Larken.Medium,
-    color: '#FFFFFF',
+    color: '#333',
   },
   imageSection: {
     alignItems: 'center',
@@ -328,7 +391,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: FontFamilies.Larken.Medium,
-    color: '#FFFFFF',
+    color: '#333',
     marginBottom: 12,
   },
   imageContainer: {
@@ -338,6 +401,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 8,
   },
+  imageWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  newImageIndicator: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#DDB15B',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   profileImage: {
     width: '100%',
     height: '100%',
@@ -345,9 +424,12 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
   },
   imagePlaceholderText: {
     marginTop: 8,
@@ -366,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   textInput: {
-    backgroundColor: '#1B3A32',
+    backgroundColor: '#f8f9fa',
     marginBottom: 8,
   },
   readOnlyInput: {
