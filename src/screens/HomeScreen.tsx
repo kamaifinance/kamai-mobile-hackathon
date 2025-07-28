@@ -3,8 +3,8 @@ import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image 
 import { Text, Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
 import { LineChart } from "react-native-gifted-charts";
-import { useVaultService, VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
-import { useAuthorization } from '../utils/useAuthorization';
+import { useVaultContext } from '../context';
+import { VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
 import { useNavigation } from '@react-navigation/native';
 
 // Generate realistic portfolio data for the past 30 days
@@ -34,67 +34,10 @@ const portfolioData = generatePortfolioData();
 
 export function HomeScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState('Daily');
-  const [vaults, setVaults] = useState<VaultInfo[]>([]);
-  const [userBalances, setUserBalances] = useState<{ [key: string]: UserVaultBalance }>({});
-  const [vaultDetails, setVaultDetails] = useState<{ [key: string]: any }>({});
-  const [loading, setLoading] = useState(true);
-  const { selectedAccount } = useAuthorization();
-  const { getVaults, getUserVaultBalance } = useVaultService();
+  const { vaults, userBalances, vaultDetails, loading } = useVaultContext();
   const navigation = useNavigation();
 
-  React.useEffect(() => {
-    loadVaults();
-  }, []);
-
-  React.useEffect(() => {
-    if (selectedAccount) {
-      loadUserBalances();
-    } else {
-      setUserBalances({});
-    }
-  }, [selectedAccount]);
-
-  const loadVaults = async () => {
-    try {
-      setLoading(true);
-      const availableVaults: VaultInfo[] = await getVaults();
-      // Only keep the three supported vaults in the correct order
-      const vaultOrder = ['SOL', 'USDC-Dev', 'mSOL'];
-      const filteredVaults: VaultInfo[] = vaultOrder.map(symbol => availableVaults.find(v => v.tokenSymbol === symbol)).filter(Boolean) as VaultInfo[];
-      setVaults(filteredVaults);
-      // Fetch vault details for each
-      const detailsObj: { [key: string]: any } = {};
-      for (const v of filteredVaults) {
-        if (v?.vault && v.vault?.tokenMint) {
-          // getVaultDetails is imported in VaultsScreen, but not here; skip details for now
-          // Optionally, you can import and fetch details if needed
-        }
-      }
-      setVaultDetails(detailsObj);
-    } catch (error) {
-      setVaults([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUserBalances = async () => {
-    if (!selectedAccount) return;
-    try {
-      const [solBalance, usdcDevBalance, msolBalance]: UserVaultBalance[] = await Promise.all([
-        getUserVaultBalance('SOL'),
-        getUserVaultBalance('USDC-Dev'),
-        getUserVaultBalance('mSOL')
-      ]);
-      setUserBalances({
-        'SOL': solBalance,
-        'USDC-Dev': usdcDevBalance,
-        'mSOL': msolBalance
-      });
-    } catch (error) {
-      setUserBalances({});
-    }
-  };
+  // All vault data is now handled by VaultContext
 
   // Aggregate total balance
   const totalBalance = vaults.reduce((sum: number, v: VaultInfo) => sum + (userBalances[v.tokenSymbol]?.withdrawableAmount || 0), 0);

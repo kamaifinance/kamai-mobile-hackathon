@@ -8,8 +8,12 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Dimensions,
+  ImageBackground,
+  ScrollView,
 } from 'react-native';
 import { VaultInfo } from '../../hooks/useVaultService';
+import { FontFamilies } from '../../styles/fonts';
 
 interface DepositModalProps {
   visible: boolean;
@@ -18,6 +22,8 @@ interface DepositModalProps {
   onDeposit: (vault: VaultInfo, amount: number) => Promise<string>;
   loading?: boolean;
 }
+
+const { height: screenHeight } = Dimensions.get('window');
 
 export default function DepositModal({
   visible,
@@ -28,6 +34,21 @@ export default function DepositModal({
 }: DepositModalProps) {
   const [amount, setAmount] = useState('');
   const [depositing, setDepositing] = useState(false);
+
+  // Helper to map vault type
+  const getVaultType = (symbol: string) => {
+    if (symbol === 'SOL') return 'Boosted';
+    if (symbol === 'USDC-Dev') return 'Protected';
+    if (symbol === 'mSOL') return 'Vault';
+    return symbol;
+  };
+
+  const getVaultCardStyle = (symbol: string) => {
+    const vaultType = getVaultType(symbol);
+    if (vaultType === 'Protected') return styles.protectedCard;
+    if (vaultType === 'Boosted') return styles.boostedCard;
+    return styles.premiumCard;
+  };
 
   const handleDeposit = async () => {
     if (!vault || !amount) return;
@@ -85,65 +106,106 @@ export default function DepositModal({
       onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Deposit to Vault</Text>
-            <TouchableOpacity onPress={handleClose} disabled={depositing}>
-              <Text style={styles.closeButton}>✕</Text>
-            </TouchableOpacity>
-          </View>
+        <TouchableOpacity style={styles.backdrop} onPress={handleClose} activeOpacity={1} />
+        <View style={styles.bottomSheet}>
+          <ImageBackground
+            source={require('../../../assets/kamai_mobile_bg.png')}
+            style={styles.backgroundImage}
+            resizeMode="cover"
+          >
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+              {/* Handle Bar */}
+              <View style={styles.handleBar} />
+              
+              {/* Title */}
+              <Text style={styles.title}>Deposit to Vault</Text>
 
-          {vault && (
-            <View style={styles.vaultInfo}>
-              <Text style={styles.vaultName}>{vault.name}</Text>
-              <Text style={styles.vaultSymbol}>{vault.tokenSymbol}</Text>
-              {vault.apy && (
-                <Text style={styles.apy}>APY: {vault.apy.toFixed(2)}%</Text>
-              )}
-            </View>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Amount to deposit</Text>
-            <View style={styles.inputWrapper}>
-              <TextInput
-                style={styles.input}
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="0.0"
-                keyboardType="numeric"
-                editable={!depositing}
-              />
+              {/* Vault Information Card */}
               {vault && (
-                <Text style={styles.tokenSymbol}>{vault.tokenSymbol}</Text>
+                <View style={[styles.vaultInfoCard, getVaultCardStyle(vault.tokenSymbol)]}>
+                  <ImageBackground
+                    source={vault.tokenSymbol === 'USDC-Dev' ? require('../../../assets/vault_normal.png') : require('../../../assets/vault_boosted.png')}
+                    style={styles.vaultCardBackground}
+                    resizeMode="cover"
+                  >
+                    <View style={styles.vaultCardContent}>
+                      <View style={styles.vaultHeader}>
+                        <Text style={styles.vaultName}>{getVaultType(vault.tokenSymbol)}</Text>
+                        <View style={styles.vaultBadge}>
+                          <Text style={styles.vaultSymbol}>{vault.tokenSymbol}</Text>
+                        </View>
+                      </View>
+                      {vault.apy && (
+                        <View style={styles.apyContainer}>
+                          <View style={styles.apyCardBadge}>
+                            <Text style={styles.apyCardValue}>{vault.apy.toFixed(2)}%</Text>
+                          </View>
+                          <Text style={styles.apyCardLabel}>APY (30 days avg.)</Text>
+                        </View>
+                      )}
+                    </View>
+                  </ImageBackground>
+                </View>
               )}
-            </View>
-          </View>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.cancelButton, depositing && styles.disabledButton]}
-              onPress={handleClose}
-              disabled={depositing}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.depositButton,
-                (!amount || depositing) && styles.disabledButton,
-              ]}
-              onPress={handleDeposit}
-              disabled={!amount || depositing}
-            >
-              {depositing ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={styles.depositButtonText}>Deposit</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              {/* Amount Input Section */}
+              <View style={styles.inputSection}>
+                <Text style={styles.inputLabel}>Amount to deposit</Text>
+                <View style={styles.inputCard}>
+                  <ImageBackground
+                    source={require('../../../assets/vault_normal.png')}
+                    style={styles.inputCardBackground}
+                    resizeMode="cover"
+                  >
+                    <View style={styles.inputCardContent}>
+                      <View style={styles.inputWrapper}>
+                        <TextInput
+                          style={styles.amountInput}
+                          value={amount}
+                          onChangeText={setAmount}
+                          placeholder="0"
+                          placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                          keyboardType="numeric"
+                          editable={!depositing}
+                        />
+                        {vault && (
+                          <View style={styles.tokenBadge}>
+                            <Text style={styles.tokenText}>{vault.tokenSymbol}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </ImageBackground>
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, depositing && styles.disabledButton]}
+                  onPress={handleClose}
+                  disabled={depositing}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.depositButton,
+                    (!amount || depositing) && styles.depositButtonDisabled,
+                  ]}
+                  onPress={handleDeposit}
+                  disabled={!amount || depositing}
+                >
+                  {depositing ? (
+                    <ActivityIndicator size="small" color="#1B3A32" />
+                  ) : (
+                    <Text style={styles.depositButtonText}>Deposit</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </ImageBackground>
         </View>
       </View>
     </Modal>
@@ -154,114 +216,201 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  modal: {
-    backgroundColor: 'white',
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: screenHeight * 0.85,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopWidth: 1,
+  },
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#666',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  vaultInfoCard: {
     borderRadius: 16,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
+    marginBottom: 24,
+    overflow: 'hidden',
+    elevation: 4,
   },
-  header: {
+  vaultCardBackground: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  vaultCardContent: {
+    padding: 20,
+  },
+  vaultHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    fontSize: 24,
-    color: '#999',
-    fontWeight: 'bold',
-  },
-  vaultInfo: {
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    marginBottom: 16,
   },
   vaultName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: 20,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  vaultBadge: {
+    backgroundColor: 'rgba(221, 177, 91, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDB15B',
   },
   vaultSymbol: {
     fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '600',
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#DDB15B',
   },
-  apy: {
+  apyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  apyCardBadge: {
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  apyCardValue: {
     fontSize: 14,
-    color: '#28a745',
-    fontWeight: '600',
-    marginTop: 4,
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#FFFFFF',
   },
-  inputContainer: {
-    marginBottom: 20,
+  apyCardLabel: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Larken.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
   },
-  label: {
+  inputSection: {
+    marginBottom: 32,
+  },
+  inputLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#DDB15B',
+    marginBottom: 12,
+  },
+  inputCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+  },
+  inputCardBackground: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  inputCardContent: {
+    padding: 20,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    justifyContent: 'space-between',
   },
-  input: {
+  amountInput: {
     flex: 1,
-    fontSize: 16,
-    paddingVertical: 12,
+    fontSize: 32,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#FFFFFF',
+    padding: 0,
+    textAlign: 'left',
   },
-  tokenSymbol: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginLeft: 8,
+  tokenBadge: {
+    backgroundColor: 'rgba(221, 177, 91, 0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDB15B',
+  },
+  tokenText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#DDB15B',
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 16,
+    paddingTop: 8,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#666',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#666',
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#FFFFFF',
   },
   depositButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#DDB15B',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   depositButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#1B3A32',
+  },
+  depositButtonDisabled: {
+    opacity: 0.5,
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  protectedCard: {
+    backgroundColor: '#2A5A47',
+  },
+  boostedCard: {
+    backgroundColor: '#8B6914',
+  },
+  premiumCard: {
+    backgroundColor: '#4C1D95',
   },
 }); 

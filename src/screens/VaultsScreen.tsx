@@ -6,82 +6,25 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { Card } from 'react-native-paper';
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 import { useVaultService, VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
+import { useVaultContext } from '../context';
 import { useAuthorization } from '../utils/useAuthorization';
 import DepositModal from '../components/vault/DepositModal';
 import { FontFamilies } from '../styles/fonts';
-import { getVaultDetails } from '../utils/vaultService';
 
 export default function VaultsScreen() {
-  const [vaults, setVaults] = useState<VaultInfo[]>([]);
-  const [userBalances, setUserBalances] = useState<{ [key: string]: UserVaultBalance }>({});
-  const [vaultDetails, setVaultDetails] = useState<{ [key: string]: any }>({});
-  const [loading, setLoading] = useState(true);
+  const { vaults, userBalances, vaultDetails, refreshUserBalances } = useVaultContext();
   const [depositing, setDepositing] = useState<string | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
   const { selectedAccount } = useAuthorization();
-  const { depositToVault, getVaults, testWallet, getUserVaultBalance } = useVaultService();
+  const { depositToVault, testWallet } = useVaultService();
 
-  useEffect(() => {
-    loadVaults();
-  }, []);
-
-  useEffect(() => {
-    if (selectedAccount) {
-      loadUserBalances();
-    } else {
-      setUserBalances({});
-    }
-  }, [selectedAccount]);
-
-  const loadVaults = async () => {
-    try {
-      setLoading(true);
-      const availableVaults = await getVaults();
-      // Only keep the three supported vaults in the correct order
-      const vaultOrder = ['SOL', 'USDC-Dev', 'mSOL'];
-      const filteredVaults = vaultOrder.map(symbol => availableVaults.find(v => v.tokenSymbol === symbol)).filter(Boolean);
-      setVaults(filteredVaults);
-      // Fetch vault details for each
-      const detailsObj: { [key: string]: any } = {};
-      for (const v of filteredVaults) {
-        if (v?.vault && v.vault?.tokenMint) {
-          const details = await getVaultDetails(v.vault, v.vault.tokenMint?.toBase58?.());
-          detailsObj[v.tokenSymbol] = details;
-        }
-      }
-      setVaultDetails(detailsObj);
-    } catch (error) {
-      console.error('Error loading vaults:', error);
-      Alert.alert('Error', 'Failed to load vaults. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadUserBalances = async () => {
-    if (!selectedAccount) return;
-    try {
-      const [solBalance, usdcDevBalance, msolBalance] = await Promise.all([
-        getUserVaultBalance('SOL'),
-        getUserVaultBalance('USDC-Dev'),
-        getUserVaultBalance('mSOL')
-      ]);
-      setUserBalances({
-        'SOL': solBalance,
-        'USDC-Dev': usdcDevBalance,
-        'mSOL': msolBalance
-      });
-    } catch (error) {
-      console.error('Error loading user balances:', error);
-    }
-  };
+  // All vault data is now handled by VaultContext
 
   const handleDeposit = async (vault: VaultInfo) => {
     if (!selectedAccount) {
@@ -99,7 +42,7 @@ export default function VaultsScreen() {
       setDepositing(vault.tokenSymbol);
       console.log('Depositing to vault:', vault.tokenSymbol);
       const signature = await depositToVault(amount, vault.tokenSymbol);
-      await loadUserBalances();
+      await refreshUserBalances();
       return signature;
     } catch (error) {
       console.error('Error depositing:', error);
@@ -170,15 +113,6 @@ export default function VaultsScreen() {
   // Weighted average APY by TVL
   const totalTVL = vaults.reduce((sum: number, v: VaultInfo) => sum + (vaultDetails[v.tokenSymbol]?.total_amount_with_profit || 0) * (vaultDetails[v.tokenSymbol]?.usd_rate || 1), 0);
   const weightedApy = totalTVL > 0 ? vaults.reduce((sum: number, v: VaultInfo) => sum + ((vaultDetails[v.tokenSymbol]?.total_amount_with_profit || 0) * (vaultDetails[v.tokenSymbol]?.usd_rate || 1) * (vaultDetails[v.tokenSymbol]?.closest_apy || 0)), 0) / totalTVL : 0;
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#F4A261" />
-        <Text style={styles.loadingText}>Loading vaults...</Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -257,18 +191,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontFamily: FontFamilies.Larken.Medium,
-  },
+
   content: {
     padding: 20,
     paddingTop: 60,

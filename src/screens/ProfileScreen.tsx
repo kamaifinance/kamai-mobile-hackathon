@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Text, Card, Button } from 'react-native-paper';
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 import { FontFamilies } from '../styles/fonts';
@@ -11,7 +11,6 @@ import { PersonalInformationForm } from '../components/profile/PersonalInformati
 export function ProfileScreen() {
   const [showPersonalInfoForm, setShowPersonalInfoForm] = useState(false);
   const [userData, setUserData] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
   const [connectingWallet, setConnectingWallet] = useState(false);
   const { selectedAccount } = useAuthorization();
   const { connect, disconnect } = useMobileWallet();
@@ -27,15 +26,12 @@ export function ProfileScreen() {
     }
 
     try {
-      setLoading(true);
       const data = await userService.getUserByWallet(selectedAccount.publicKey.toBase58());
       console.log('User data:', data);
       setUserData(data);
     } catch (error) {
       console.error('Error loading user data:', error);
       setUserData(null);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -106,51 +102,45 @@ export function ProfileScreen() {
           {/* Profile Card */}
           <Card style={styles.profileCard}>
             <Card.Content style={styles.profileContent}>
-              {loading ? (
-                <ActivityIndicator size="large" color="#F4A261" />
-              ) : (
-                <>
-                  {/* Profile Avatar */}
-                  <View style={styles.avatarContainer}>
-                    <View style={styles.avatar}>
-                      {userData?.profile_image ? (
-                        <Image 
-                          source={{ uri: userData.profile_image }} 
-                          style={styles.avatarImage}
-                        />
-                      ) : (
-                        <MaterialCommunityIcon 
-                          name="account" 
-                          size={60} 
-                          color="#666" 
-                        />
-                      )}
-                    </View>
-                  </View>
-                  
-                  {/* User Info */}
-                  <Text style={styles.userName}>{getUserDisplayName()}</Text>
-                  <Text style={styles.userEmail}>{getUserEmail()}</Text>
-                  
-                  {/* Premium Badge or Connect Button */}
-                  {!selectedAccount && (
-                    <Button
-                      mode="contained"
-                      onPress={handleConnectWallet}
-                      disabled={connectingWallet}
-                      style={styles.connectButton}
-                      buttonColor="#F4A261"
-                      textColor="#1B3A32"
-                    >
-                      {connectingWallet ? 'Connecting...' : 'Connect Wallet'}
-                    </Button>
+              {/* Profile Avatar */}
+              <View style={styles.avatarContainer}>
+                <View style={styles.avatar}>
+                  {userData?.profile_image ? (
+                    <Image 
+                      source={{ uri: userData.profile_image }} 
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <MaterialCommunityIcon 
+                      name="account" 
+                      size={60} 
+                      color="#666" 
+                    />
                   )}
-                </>
+                </View>
+              </View>
+              
+              {/* User Info */}
+              <Text style={styles.userName}>{getUserDisplayName()}</Text>
+              <Text style={styles.userEmail}>{getUserEmail()}</Text>
+              
+              {/* Premium Badge or Connect Button */}
+              {!selectedAccount && (
+                <Button
+                  mode="contained"
+                  onPress={handleConnectWallet}
+                  disabled={connectingWallet}
+                  style={styles.connectButton}
+                  buttonColor="#F4A261"
+                  textColor="#1B3A32"
+                >
+                  {connectingWallet ? 'Connecting...' : 'Connect Wallet'}
+                </Button>
               )}
             </Card.Content>
           </Card>
 
-          {/* Stats Cards */}
+          {/* Stats Cards
           <View style={styles.statsContainer}>
             <View style={styles.statsRow}>
               <Card style={styles.statCard}>
@@ -174,7 +164,7 @@ export function ProfileScreen() {
                 </Card.Content>
               </Card>
             </View>
-          </View>
+          </View> */}
 
           {/* Account Section */}
           <Text style={styles.sectionTitle}>Account</Text>

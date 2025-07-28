@@ -8,6 +8,8 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Dimensions,
+  ImageBackground,
 } from 'react-native';
 import { TextInput, Card, Button } from 'react-native-paper';
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
@@ -20,6 +22,8 @@ interface PersonalInformationFormProps {
   visible: boolean;
   onClose: () => void;
 }
+
+const { height: screenHeight } = Dimensions.get('window');
 
 export function PersonalInformationForm({ visible, onClose }: PersonalInformationFormProps) {
   const [name, setName] = useState('');
@@ -200,17 +204,17 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
 
   return (
     <View style={styles.overlay}>
-      <Card style={styles.modal}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <Card.Content style={styles.content}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.title}>Personal Information</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <MaterialCommunityIcon name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
+      <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
+      <View style={styles.bottomSheet}>
+        <ImageBackground
+          source={require('../../../assets/kamai_mobile_bg.png')}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        >
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+            {/* Handle Bar */}
+            <View style={styles.handleBar} />
+            
             {loading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#DDB15B" />
@@ -219,122 +223,104 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
             ) : (
               <>
                 {/* Profile Image Section */}
-                <View style={styles.imageSection}>
-                  <Text style={styles.sectionTitle}>Profile Photo</Text>
-                  <TouchableOpacity style={styles.imageContainer} onPress={showImagePicker}>
+                <View style={styles.profileSection}>
+                  <TouchableOpacity style={styles.profileImageContainer} onPress={showImagePicker}>
                     {profileImageUri ? (
-                      <View style={styles.imageWrapper}>
+                      <View style={styles.profileImageWrapper}>
                         <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
-                        {profileImageBase64 && profileImageUri && !profileImageUri.startsWith('http') && (
-                          <View style={styles.newImageIndicator}>
-                            <MaterialCommunityIcon name="upload" size={16} color="#fff" />
-                          </View>
-                        )}
                       </View>
                     ) : (
-                      <View style={styles.imagePlaceholder}>
-                        <MaterialCommunityIcon name="camera-plus" size={32} color="#666" />
-                        <Text style={styles.imagePlaceholderText}>Add Photo</Text>
+                      <View style={styles.profileImagePlaceholder}>
+                        <MaterialCommunityIcon name="account-circle" size={80} color="#ffffff" />
                       </View>
                     )}
                   </TouchableOpacity>
-                  <Text style={styles.imageHelpText}>
-                    {profileImageBase64 && profileImageUri && !profileImageUri.startsWith('http')
-                      ? 'New image selected - save to upload'
-                      : profileImageUri && profileImageUri.startsWith('http')
-                      ? 'Tap to change your profile photo'
-                      : 'Tap to add or change your profile photo'
-                    }
-                  </Text>
+                  <Text style={styles.profileImageText}>Tap to add or change your profile picture</Text>
                 </View>
 
-                {/* Name Section */}
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionTitle}>Full Name</Text>
-                  <TextInput
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Enter your full name"
-                    placeholderTextColor="#999"
-                    style={styles.textInput}
-                    theme={{
-                      colors: {
-                        primary: '#DDB15B',
-                        text: '#333',
-                        placeholder: '#999',
-                      }
-                    }}
-                  />
-                </View>
-
-                {/* Email Section */}
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionTitle}>Email Address</Text>
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="Enter your email address (optional)"
-                    placeholderTextColor="#999"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    style={styles.textInput}
-                    theme={{
-                      colors: {
-                        primary: '#DDB15B',
-                        text: '#333',
-                        placeholder: '#999',
-                      }
-                    }}
-                  />
-                  <Text style={styles.helperText}>
-                    Email is optional but helps with account recovery and notifications
-                  </Text>
-                </View>
-
-                {/* Wallet Address Section (Read-only) */}
-                <View style={styles.inputSection}>
-                  <Text style={styles.sectionTitle}>Wallet Address</Text>
-                  <TextInput
-                    value={selectedAccount?.publicKey.toBase58() || 'Not connected'}
-                    editable={false}
-                    style={[styles.textInput, styles.readOnlyInput]}
-                    theme={{
-                      colors: {
-                        primary: '#DDB15B',
-                        text: '#666',
-                        placeholder: '#999',
-                      }
-                    }}
-                    right={
-                      <TextInput.Icon
-                        icon={() => (
-                          <MaterialCommunityIcon name="wallet" size={20} color="#DDB15B" />
-                        )}
+                {/* Form Fields */}
+                <View style={styles.formContainer}>
+                  {/* Name Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Name</Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="John Doe"
+                        placeholderTextColor="#fff"
+                        style={styles.textInput}
+                        underlineColor="transparent"
+                        activeUnderlineColor="transparent"
+                        textColor="#fff"
                       />
-                    }
-                  />
+                    </View>
+                  </View>
+
+                  {/* Wallet Address Field */}
+                 
+
+                  {/* Email Field */}
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Email Address</Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="Enter your email address (optional)"
+                        placeholderTextColor="#fff"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        style={styles.textInput}
+                        underlineColor="transparent"
+                        activeUnderlineColor="transparent"
+                        textColor="#fff"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Wallet Address</Text>
+                    <View style={styles.inputWrapper}>
+                      <TextInput
+                        value={selectedAccount?.publicKey.toBase58().slice(0, 20) + '...' + selectedAccount?.publicKey.toBase58().slice(-4) || 'CMCM....Le9U'}
+                        editable={false}
+                        style={[styles.textInput, styles.readOnlyInput]}
+                        underlineColor="transparent"
+                        activeUnderlineColor="transparent"
+                         textColor="#fff"
+                      />
+                    </View>
+                  </View>
+
                   <Text style={styles.helperText}>
-                    Your profile is saved to the database and linked to this wallet address
+                    Your profile will be saved and linked to this wallet address
                   </Text>
                 </View>
 
-                {/* Save Button */}
-                <Button
-                  mode="contained"
-                  onPress={handleSave}
-                  loading={saving}
-                  disabled={saving || !selectedAccount}
-                  style={styles.saveButton}
-                  contentStyle={styles.saveButtonContent}
-                  labelStyle={styles.saveButtonText}
-                >
-                  {saving ? 'Saving...' : 'Save Information'}
-                </Button>
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.saveButton, (saving || !selectedAccount) && styles.saveButtonDisabled]}
+                    onPress={handleSave}
+                    disabled={saving || !selectedAccount}
+                  >
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#1B3A32" />
+                    ) : (
+                      <Text style={styles.saveButtonText}>Save</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </>
             )}
-          </Card.Content>
-        </ScrollView>
-      </Card>
+          </ScrollView>
+        </ImageBackground>
+      </View>
     </View>
   );
 }
@@ -346,33 +332,43 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
     zIndex: 1000,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
-  modal: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: 'white',
-    borderRadius: 16,
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
-  content: {
-    padding: 24,
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: screenHeight * 0.85,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 0,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopWidth: 1,
   },
-  title: {
-    fontSize: 24,
-    fontFamily: FontFamilies.Larken.Bold,
-    color: '#333',
+  scrollView: {
+    flex: 1,
   },
-  closeButton: {
-    padding: 4,
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#666',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -382,74 +378,86 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontFamily: FontFamilies.Larken.Medium,
-    color: '#333',
+    color: '#FFFFFF',
   },
-  imageSection: {
+  profileSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontFamily: FontFamilies.Larken.Medium,
-    color: '#333',
-    marginBottom: 12,
-  },
-  imageContainer: {
+  profileImageContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    overflow: 'hidden',
     marginBottom: 8,
-  },
-  imageWrapper: {
-    width: '100%',
-    height: '100%',
     position: 'relative',
   },
-  newImageIndicator: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#DDB15B',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+  profileImageWrapper: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 60,
+    overflow: 'hidden',
+    position: 'relative',
   },
   profileImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 60,
   },
-  imagePlaceholder: {
+  profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#f8f9fa',
+    borderRadius: 60,
+    backgroundColor: '#2B3834',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
+    position: 'relative',
   },
-  imagePlaceholderText: {
-    marginTop: 8,
-    fontSize: 12,
-    fontFamily: FontFamilies.Larken.Medium,
-    color: '#666',
+  editIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#DDB15B',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#1B2A26',
   },
-  imageHelpText: {
-    fontSize: 12,
+  profileImageText: {
+    fontSize: 10,
     fontFamily: FontFamilies.Larken.Regular,
-    color: '#666',
+    color: '#999',
     textAlign: 'center',
     maxWidth: 200,
   },
-  inputSection: {
-    marginBottom: 24,
+  formContainer: {
+    marginBottom: 20,
+  },
+  fieldContainer: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#DDB15B',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    backgroundColor: '#2B3834',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3A4B45',
   },
   textInput: {
-    backgroundColor: '#f8f9fa',
-    marginBottom: 8,
+    backgroundColor: 'transparent',
+    fontSize: 16,
+    fontFamily: FontFamilies.Larken.Regular,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 40,
+    color: '#fff',
   },
   readOnlyInput: {
     opacity: 0.7,
@@ -457,16 +465,39 @@ const styles = StyleSheet.create({
   helperText: {
     fontSize: 12,
     fontFamily: FontFamilies.Larken.Regular,
-    color: '#666',
-    marginTop: 4,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#666',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Larken.Medium,
+    color: '#FFFFFF',
   },
   saveButton: {
+    flex: 1,
     backgroundColor: '#DDB15B',
     borderRadius: 12,
-    marginTop: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveButtonContent: {
-    paddingVertical: 12,
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
   saveButtonText: {
     fontSize: 16,
