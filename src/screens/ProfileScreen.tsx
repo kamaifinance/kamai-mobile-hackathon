@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Text, Card, Button } from 'react-native-paper';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Text } from 'react-native';
+import { Card, Button } from 'react-native-paper';
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 import { FontFamilies } from '../styles/fonts';
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
 import { userService, User } from '../../lib/supabase';
 import { PersonalInformationForm } from '../components/profile/PersonalInformationForm';
+import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
 
 export function ProfileScreen() {
   const [showPersonalInfoForm, setShowPersonalInfoForm] = useState(false);
   const [userData, setUserData] = useState<User | null>(null);
   const [connectingWallet, setConnectingWallet] = useState(false);
+  const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
   const { selectedAccount } = useAuthorization();
   const { connect, disconnect } = useMobileWallet();
 
@@ -42,7 +44,7 @@ export function ProfileScreen() {
       await connect();
     } catch (error) {
       console.error('Error connecting wallet:', error);
-      alert('Failed to connect wallet. Please try again.');
+      setShowConnectWalletAlert(true);
     } finally {
       setConnectingWallet(false);
     }
@@ -50,7 +52,7 @@ export function ProfileScreen() {
 
   const handlePersonalInfo = () => {
     if (!selectedAccount) {
-      alert('Please connect your wallet first to access personal information.');
+      setShowConnectWalletAlert(true);
       return;
     }
     setShowPersonalInfoForm(true);
@@ -88,7 +90,7 @@ export function ProfileScreen() {
     if (selectedAccount) {
       return userData?.email || 'Connect your wallet';
     }
-    return 'Connect your wallet';
+    return '';
   };
 
   return (
@@ -110,10 +112,9 @@ export function ProfileScreen() {
                       style={styles.avatarImage}
                     />
                   ) : (
-                    <MaterialCommunityIcon 
-                      name="account" 
-                      size={60} 
-                      color="#666" 
+                    <Image 
+                      source={require('../../assets/guest_user.png')} 
+                      style={styles.avatarImage}
                     />
                   )}
                 </View>
@@ -121,7 +122,9 @@ export function ProfileScreen() {
               
               {/* User Info */}
               <Text style={styles.userName}>{getUserDisplayName()}</Text>
-              <Text style={styles.userEmail}>{getUserEmail()}</Text>
+              {selectedAccount && (
+                <Text style={styles.userEmail}>{getUserEmail()}</Text>
+              )}
               
               {/* Premium Badge or Connect Button */}
               {!selectedAccount && (
@@ -130,7 +133,7 @@ export function ProfileScreen() {
                   onPress={handleConnectWallet}
                   disabled={connectingWallet}
                   style={styles.connectButton}
-                  buttonColor="#F4A261"
+                  buttonColor="#DDB15B"
                   textColor="#1B3A32"
                 >
                   {connectingWallet ? 'Connecting...' : 'Connect Wallet'}
@@ -248,6 +251,14 @@ export function ProfileScreen() {
         visible={showPersonalInfoForm}
         onClose={handlePersonalInfoClose}
       />
+      
+      {/* Connect Wallet Alert */}
+      <ConnectWalletAlert
+        visible={showConnectWalletAlert}
+        onDismiss={() => setShowConnectWalletAlert(false)}
+        title="Connection Failed"
+        message="Failed to connect wallet. Please try again."
+      />
     </>
   );
 }
@@ -306,7 +317,7 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 14,
-    fontFamily: FontFamilies.Larken.Regular,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     marginBottom: 16,
     textAlign: 'center',
@@ -322,7 +333,7 @@ const styles = StyleSheet.create({
   },
   premiumText: {
     fontSize: 12,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#F4A261',
   },
   connectButton: {
@@ -357,7 +368,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    fontFamily: FontFamilies.Larken.Regular,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     textAlign: 'center',
   },
@@ -374,7 +385,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(13, 69, 50, 0.14)',
+    backgroundColor: 'rgba(4, 23, 19, 1)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#2B3834',
@@ -411,15 +422,16 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     marginLeft: 20,
   },
   menuSubtext: {
     fontSize: 12,
-    fontFamily: FontFamilies.Larken.Regular,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#666',
     marginTop: 2,
+    marginLeft: 20,
   },
   logoutText: {
     color: '#FF6B6B',

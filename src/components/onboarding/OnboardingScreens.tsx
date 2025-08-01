@@ -6,7 +6,6 @@ import {
   Dimensions,
   ScrollView,
   TouchableOpacity,
-  ImageBackground,
   Image,
 } from 'react-native';
 import { FontFamilies } from '../../styles/fonts';
@@ -76,7 +75,7 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
   const renderTokensVisual = () => (
     <View style={styles.phoneContainer}>
       <Image 
-        source={require('../../../assets/onboarding_2.png')}
+        source={require('../../../assets/onboarding_screen_2.png')}
         style={styles.phoneImage2}
         resizeMode="contain"
       />
@@ -171,11 +170,7 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
   };
 
   return (
-    <ImageBackground
-      source={require('../../../assets/kamai_mobile_bg.png')}
-      style={styles.container}
-      resizeMode="cover"
-    >
+    <View style={styles.container}>
       {renderProgressDots()}
       
       <ScrollView
@@ -189,14 +184,14 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
       >
         {onboardingData.map((item, index) => renderScreen(item, index))}
       </ScrollView>
-    </ImageBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A1F1B',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
@@ -213,7 +208,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 80, // Increased to account for status bar without SafeAreaView
     paddingBottom: 20,
     gap: 8,
   },
@@ -313,7 +308,7 @@ const styles = StyleSheet.create({
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(45, 56, 52, 0.9)',
+    backgroundColor: '#061512',
     borderRadius: 16,
     padding: 16,
     gap: 16,
@@ -364,8 +359,8 @@ const styles = StyleSheet.create({
     marginRight:-50,
   },
   phoneImage2: {
-    width: 500,
-    height: 500,
+    width: 550,
+    height: 550,
   },
   phoneImage3: {
     width: 400,

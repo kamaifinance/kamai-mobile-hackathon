@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { FontFamilies } from '../../styles/fonts';
 import { useAuthorization } from '../../utils/useAuthorization';
 import { userService, storageService, User } from '../../../lib/supabase';
+import { ConnectWalletAlert } from '../ui/ConnectWalletAlert';
 
 interface PersonalInformationFormProps {
   visible: boolean;
@@ -32,6 +33,7 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
   const [profileImageBase64, setProfileImageBase64] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
   const { selectedAccount } = useAuthorization();
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
 
   const handleSave = async () => {
     if (!selectedAccount) {
-      Alert.alert('Error', 'No wallet connected. Please connect your wallet first.');
+      setShowConnectWalletAlert(true);
       return;
     }
 
@@ -230,8 +232,8 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
                         <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
                       </View>
                     ) : (
-                      <View style={styles.profileImagePlaceholder}>
-                        <MaterialCommunityIcon name="account-circle" size={80} color="#ffffff" />
+                      <View style={styles.profileImageWrapper}>
+                        <Image source={require('../../../assets/guest_user.png')} style={styles.profileImage} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -321,6 +323,13 @@ export function PersonalInformationForm({ visible, onClose }: PersonalInformatio
           </ScrollView>
         </ImageBackground>
       </View>
+      
+      {/* Connect Wallet Alert */}
+      <ConnectWalletAlert
+        visible={showConnectWalletAlert}
+        onDismiss={() => setShowConnectWalletAlert(false)}
+        message="No wallet connected. Please connect your wallet first."
+      />
     </View>
   );
 }

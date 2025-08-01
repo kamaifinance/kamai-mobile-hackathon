@@ -1,0 +1,70 @@
+[
+  {
+    "name": "sanctum",
+    "status": "success",
+    "iconPath": "sanctum.ico",
+    "url": "https://app.sanctum.so/",
+    "faviconUrl": "https://app.sanctum.so/favicon.ico"
+  },
+  {
+    "name": "huma",
+    "status": "success",
+    "iconPath": "huma.ico",
+    "url": "https://app.huma.finance/",
+    "faviconUrl": "https://app.huma.finance/favicon.ico"
+  },
+  {
+    "name": "stabble",
+    "status": "success_fallback",
+    "iconPath": "stabble.ico",
+    "url": "https://app.stabble.org/",
+    "faviconUrl": "https://app.stabble.org/favicon.ico"
+  },
+  {
+    "name": "perena",
+    "status": "success",
+    "iconPath": "perena.svg",
+    "url": "https://app.perena.org/",
+    "faviconUrl": "https://app.perena.org/logo.svg"
+  },
+  {
+    "name": "orca",
+    "status": "success",
+    "iconPath": "orca.ico",
+    "url": "https://www.orca.so/",
+    "faviconUrl": "https://www.orca.so/favicon.ico"
+  },
+  {
+    "name": "orogold",
+    "status": "success",
+    "iconPath": "orogold.ico",
+    "url": "https://orogold.app/",
+    "faviconUrl": "https://orogold.app/favicon.ico"
+  },
+  {
+    "name": "defituna",
+    "status": "success",
+    "iconPath": "defituna.ico",
+    "url": "https://defituna.com/",
+    "faviconUrl": "https://defituna.com/icon.ico?7c0869abfe1dc044"
+  },
+  {
+    "name": "stabble-btc",
+    "status": "copied",
+    "iconPath": "stabble-btc.ico"
+  },
+  {
+    "name": "satlayer",
+    "status": "success",
+    "iconPath": "satlayer.ico",
+    "url": "https://app.satlayer.xyz/",
+    "faviconUrl": "https://app.satlayer.xyz/favicon.ico"
+  },
+  {
+    "name": "lulo",
+    "status": "success",
+    "iconPath": "lulo.ico",
+    "url": "https://app.lulo.fi/",
+    "faviconUrl": "https://app.lulo.fi/favicon.ico"
+  }
+]

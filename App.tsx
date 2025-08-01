@@ -3,6 +3,7 @@ import "./src/polyfills";
 
 import { StyleSheet, useColorScheme, ImageBackground } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useCallback, useState } from 'react';
@@ -138,12 +139,15 @@ export default function App() {
   // Show onboarding if user hasn't completed it
   if (showOnboarding) {
     return (
-      <SafeAreaView 
-        style={[styles.shell, { backgroundColor: 'transparent' }]} 
+      <ImageBackground
+        source={require('./assets/kamai_mobile_bg.png')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
         onLayout={onLayoutRootView}
       >
+        <StatusBar style="light" />
         <OnboardingScreens onComplete={handleOnboardingComplete} />
-      </SafeAreaView>
+      </ImageBackground>
     );
   }
 

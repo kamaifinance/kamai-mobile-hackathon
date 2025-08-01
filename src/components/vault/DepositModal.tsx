@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { VaultInfo } from '../../hooks/useVaultService';
 import { FontFamilies } from '../../styles/fonts';
+import { SuccessAlert } from '../ui/SuccessAlert';
 
 interface DepositModalProps {
   visible: boolean;
@@ -34,6 +35,8 @@ export default function DepositModal({
 }: DepositModalProps) {
   const [amount, setAmount] = useState('');
   const [depositing, setDepositing] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
@@ -62,26 +65,10 @@ export default function DepositModal({
       setDepositing(true);
       const signature = await onDeposit(vault, numAmount);
       
-      Alert.alert(
-        'Success!',
-        `Successfully deposited ${amount} ${vault.tokenSymbol} to ${vault.name}.\nTransaction: ${signature}`,
-        [
-          {
-            text: 'View on Explorer',
-            onPress: () => {
-              // You could open the explorer URL here
-              console.log('Transaction signature:', signature);
-            },
-          },
-          { 
-            text: 'OK',
-            onPress: () => {
-              setAmount('');
-              onClose();
-            },
-          },
-        ]
-      );
+      setSuccessMessage(`Successfully deposited ${amount} ${vault.tokenSymbol} to ${getVaultType(vault.tokenSymbol)} vault.`);
+      setAmount('');
+      onClose();
+      setShowSuccessAlert(true);
     } catch (error) {
       console.error('Error depositing:', error);
       Alert.alert('Error', 'Failed to deposit. Please try again.');
@@ -98,6 +85,7 @@ export default function DepositModal({
   };
 
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -208,7 +196,16 @@ export default function DepositModal({
         </View>
       </View>
     </Modal>
-  );
+
+    <SuccessAlert
+      visible={showSuccessAlert}
+      message={successMessage}
+      onDismiss={() => {
+        setShowSuccessAlert(false);
+      }}
+      />
+    </>
+    );
 }
 
 const styles = StyleSheet.create({

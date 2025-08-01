@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image, Alert } from "react-native";
-import { Text, Card } from "react-native-paper";
+import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image, Text } from "react-native";
+import { Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
 import { LineChart } from "react-native-gifted-charts";
 import { useVaultContext } from '../context';
 import { VaultInfo, UserVaultBalance, useVaultService } from '../hooks/useVaultService';
 import { useAuthorization } from '../utils/useAuthorization';
 import DepositModal from '../components/vault/DepositModal';
+import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -38,6 +39,7 @@ export function HomeScreen() {
   const [depositing, setDepositing] = useState<string | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
+  const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
   const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
   const { selectedAccount } = useAuthorization();
   const { depositToVault } = useVaultService();
@@ -68,7 +70,7 @@ export function HomeScreen() {
 
   const handleDeposit = async (vault: VaultInfo) => {
     if (!selectedAccount) {
-      Alert.alert('Error', 'Please connect your wallet first.');
+      setShowConnectWalletAlert(true);
       return;
     }
     console.log('Vault:', vault.tokenSymbol);
@@ -226,6 +228,10 @@ export function HomeScreen() {
         onDeposit={handleDepositConfirm}
         loading={depositing !== null}
       />
+      <ConnectWalletAlert
+        visible={showConnectWalletAlert}
+        onDismiss={() => setShowConnectWalletAlert(false)}
+      />
     </ScrollView>
   );
 }
@@ -261,7 +267,7 @@ const styles = StyleSheet.create({
   },
   totalValueLabel: {
     fontSize: 16,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     marginBottom: 8,
     textAlign: 'center',
@@ -275,7 +281,7 @@ const styles = StyleSheet.create({
   },
   apyText: {
     fontSize: 14,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
   },
   apyBadge: {
@@ -330,7 +336,7 @@ const styles = StyleSheet.create({
   },
   periodButtonText: {
     fontSize: 14,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: 'rgba(255, 255, 255, 0.4)',
   },
   selectedPeriodButtonText: {
@@ -429,7 +435,7 @@ const styles = StyleSheet.create({
   },
   investmentType: {
     fontSize: 16,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
   },
   investmentAmount: {
@@ -451,12 +457,12 @@ const styles = StyleSheet.create({
   },
   apyCardValue: {
     fontSize: 14,
-    fontFamily: FontFamilies.Larken.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
   },
   apyCardLabel: {
     fontSize: 12,
-    fontFamily: FontFamilies.Larken.Regular,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     opacity: 0.7,
   },

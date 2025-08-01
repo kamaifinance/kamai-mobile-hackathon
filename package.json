@@ -9,6 +9,7 @@
     "web": "expo start --web",
     "build": "npx eas build --profile development --platform android",
     "build:local": "npx eas build --profile development --platform android --local",
+    "build:production": "npx eas build --profile production --platform android",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Linking, Alert, Image } from "react-native";
-import { Text } from "react-native-paper";
+import { Text } from "react-native";
 import { FontFamilies } from "../styles/fonts";
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 
@@ -14,6 +14,14 @@ const protocolIcons = {
   'lulo-lending': require('../../assets/protocol-icons/lulo-lending.png'),
   deficarrot: require('../../assets/protocol-icons/deficarrot.png'),
   'kamino-lending': require('../../assets/protocol-icons/kamino-lending.png'),
+  sanctum: require('../../assets/protocol-icons/sanctum.png'),
+  satlayer: require('../../assets/protocol-icons/satlayer.png'),
+  huma: require('../../assets/protocol-icons/huma.png'),
+  stabble: require('../../assets/protocol-icons/stabble.png'),
+  orca: require('../../assets/protocol-icons/orca.png'),
+  orogold: require('../../assets/protocol-icons/orogold.png'),
+  defituna: require('../../assets/protocol-icons/defituna.png'),
+  solayer: require('../../assets/protocol-icons/sollayer.jpg'),
 } as const;
 
 // Platform data for the explore screen
@@ -24,7 +32,7 @@ const exploreData = {
       name: 'Sanctum',
       apy: '14%',
       url: 'https://app.sanctum.so/',
-      icon: '🏛️', // Fallback to emoji until we get PNG
+      iconKey: 'sanctum' as keyof typeof protocolIcons,
     },
   ],
   restaking: [
@@ -33,13 +41,13 @@ const exploreData = {
       name: 'Satlayer',
       apy: '25%',
       url: 'https://app.satlayer.xyz/vaults/restake',
-      icon: '⚡', // Fallback to emoji until we get PNG
+      iconKey: 'satlayer' as keyof typeof protocolIcons,
     },
     {
       id: 'solayer',
       name: 'Solayer Labs',
       url: 'https://x.com/solayer_labs',
-      icon: '🔧', // Keep emoji as fallback for Twitter link
+      iconKey: 'solayer' as keyof typeof protocolIcons,
     },
     {
       id: 'lombard',
@@ -54,21 +62,21 @@ const exploreData = {
       name: 'Huma Finance',
       apy: '14%',
       url: 'https://app.huma.finance/',
-      icon: '🏦', // Fallback to emoji until we get PNG
+      iconKey: 'huma' as keyof typeof protocolIcons,
     },
     {
       id: 'stabble',
       name: 'Stabble',
       apy: '13%',
       url: 'https://app.stabble.org/liquidity-pools/?search=&tag=usd&verified=true&boosted=false&rewarded=false&deposits=false',
-      icon: '🔒', // Fallback to emoji until we get PNG
+      iconKey: 'stabble' as keyof typeof protocolIcons,
     },
     {
       id: 'lulo',
       name: 'Lulo',
       apy: '10%',
       url: 'https://app.lulo.fi',
-      icon: '🎯', // Fallback to emoji until we get PNG
+      iconKey: 'lulo-lending' as keyof typeof protocolIcons,
     },
     {
       id: 'kamino',
@@ -89,7 +97,7 @@ const exploreData = {
       name: 'Orca',
       apy: '1.4%',
       url: 'https://www.orca.so/pools/ArisQNcbjXPJD7RgPRvysatX3xcfHPTbcTkfD8kDoZ9i',
-      icon: '🐋', // Fallback to emoji until we get PNG
+      iconKey: 'orca' as keyof typeof protocolIcons,
     },
     {
       id: 'raydium',
@@ -104,7 +112,7 @@ const exploreData = {
       name: 'Stabble',
       apy: '4%',
       url: 'https://app.stabble.org/liquidity-pools/?tag=all&verified=true&boosted=false&rewarded=false&deposits=false&search=zbtc',
-      icon: '₿', // Fallback to emoji until we get PNG
+      iconKey: 'stabble' as keyof typeof protocolIcons,
     },
   ],
   rwas: [
@@ -113,7 +121,7 @@ const exploreData = {
       name: 'Oro Gold',
       apy: '3%',
       url: 'https://orogold.app/',
-      icon: '🏆', // Fallback to emoji until we get PNG
+      iconKey: 'orogold' as keyof typeof protocolIcons,
     },
     {
       id: 'parcl',
@@ -145,7 +153,7 @@ const exploreData = {
       id: 'defituna',
       name: 'DeFi Tuna',
       url: 'https://defituna.com/lending',
-      icon: '🐟', // Fallback to emoji until we get PNG
+      iconKey: 'defituna' as keyof typeof protocolIcons,
     },
     {
       id: 'kamino-lending',
@@ -366,7 +374,7 @@ const styles = StyleSheet.create({
   },
   platformName: {
     fontSize: 16,
-    fontFamily: FontFamilies.Geist.Medium,
+    fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     marginBottom: 2,
   },
