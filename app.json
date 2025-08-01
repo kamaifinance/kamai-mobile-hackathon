@@ -23,7 +23,10 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.solana.mobile.expo.template"
+      "package": "com.solana.mobile.expo.template",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +37,18 @@
         "expo-font",
         {
           "fonts": [
+            "./assets/fonts/Geist-Regular.ttf",
+            "./assets/fonts/Geist-Bold.ttf",
+            "./assets/fonts/Geist-Medium.ttf",
+            "./assets/fonts/Geist-SemiBold.ttf",
+            "./assets/fonts/Geist-Light.ttf",
+            "./assets/fonts/Geist-Black.ttf",
+            "./assets/fonts/Geist-BlackItalic.ttf",
+            "./assets/fonts/Geist-ExtraBold.ttf",
+            "./assets/fonts/Geist-ExtraBoldItalic.ttf",
+            "./assets/fonts/Geist-ExtraLight.ttf",
+            "./assets/fonts/Geist-ExtraLightItalic.ttf",
+            "./assets/fonts/Geist-Italic.ttf",
             "./assets/fonts/Saleha.ttf",
             "./assets/fonts/Larken Bold Italic.ttf",
             "./assets/fonts/Larken Bold.ttf",
@@ -56,6 +71,11 @@
           "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos to your device."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7401ed0e-e101-4762-986f-7574f4add90e"
+      }
+    }
   }
 }

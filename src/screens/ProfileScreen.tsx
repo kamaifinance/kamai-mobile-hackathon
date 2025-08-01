@@ -80,7 +80,6 @@ export function ProfileScreen() {
   const getUserDisplayName = () => {
     // If user has a name in database, show it, otherwise show "Connected User"
     if (userData?.name) return userData.name;
-    if (selectedAccount) return 'Bhavya Gor';
     return 'Guest User';
   };
 

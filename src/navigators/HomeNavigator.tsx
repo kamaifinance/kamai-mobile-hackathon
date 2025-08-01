@@ -2,9 +2,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { ExploreScreen } from "../screens/ExploreScreen";
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 import { useTheme } from "react-native-paper";
-import VaultsScreen from "../screens/VaultsScreen";
 import { View, TouchableOpacity, Text, AccessibilityState, GestureResponderEvent } from "react-native";
 
 const Tab = createBottomTabNavigator();
@@ -106,12 +106,12 @@ export function HomeNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Vault" 
-        component={VaultsScreen}
+        name="Explore" 
+        component={ExploreScreen}
         options={{ 
-          tabBarLabel: "Vault",
+          tabBarLabel: "Explore",
           tabBarButton: (props) => (
-            <CustomTabBarButton {...props} label="Vault" iconName="safe" iconNameFocused="safe" />
+            <CustomTabBarButton {...props} label="Explore" iconName="compass-outline" iconNameFocused="compass" />
           ),
         }}
       />

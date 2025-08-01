@@ -49,10 +49,10 @@ export function VaultProvider({ children }: VaultProviderProps) {
       setError(null);
       
       const availableVaults = await getVaults();
-      // Only keep the three supported vaults in the correct order
-      const vaultOrder = ['SOL', 'USDC-Dev', 'mSOL'];
+      // Only keep the two supported vaults in the correct order
+      const vaultOrder = ['SOL', 'USDC'];
       const filteredVaults = vaultOrder.map(symbol => 
-        availableVaults.find(v => v.tokenSymbol === symbol)
+        availableVaults.find((v: any) => v.tokenSymbol === symbol)
       ).filter(Boolean) as VaultInfo[];
       
       setVaults(filteredVaults);

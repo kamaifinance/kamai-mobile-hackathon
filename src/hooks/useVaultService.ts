@@ -18,6 +18,9 @@ export interface VaultInfo {
   apy?: number;
   type?: 'dynamic' | 'stake2earn';
   address?: string;
+  withdrawableAmount?: number;
+  virtualPrice?: number;
+  category?: string;
 }
 
 export interface UserVaultBalance {

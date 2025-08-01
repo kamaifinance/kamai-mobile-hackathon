@@ -16,6 +16,13 @@ export const FontFamilies = {
     Thin: 'Larken Thin',
     ThinItalic: 'Larken Thin Italic',
   },
+  Geist: {
+    Regular: 'Geist',
+    Bold: 'Geist Bold',
+    Medium: 'Geist Medium',
+    SemiBold: 'Geist SemiBold',
+    Light: 'Geist Light',
+  }
 } as const;
 
 // Type for font families

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image } from "react-native";
+import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image, Alert } from "react-native";
 import { Text, Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
 import { LineChart } from "react-native-gifted-charts";
 import { useVaultContext } from '../context';
-import { VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
-import { useNavigation } from '@react-navigation/native';
+import { VaultInfo, UserVaultBalance, useVaultService } from '../hooks/useVaultService';
+import { useAuthorization } from '../utils/useAuthorization';
+import DepositModal from '../components/vault/DepositModal';
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -34,8 +35,12 @@ const portfolioData = generatePortfolioData();
 
 export function HomeScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState('Daily');
-  const { vaults, userBalances, vaultDetails, loading } = useVaultContext();
-  const navigation = useNavigation();
+  const [depositing, setDepositing] = useState<string | null>(null);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
+  const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
+  const { selectedAccount } = useAuthorization();
+  const { depositToVault } = useVaultService();
 
   // All vault data is now handled by VaultContext
 
@@ -45,8 +50,7 @@ export function HomeScreen() {
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
     if (symbol === 'SOL') return 'Boosted';
-    if (symbol === 'USDC-Dev') return 'Protected';
-    if (symbol === 'mSOL') return 'Vault';
+    if (symbol === 'USDC') return 'Protected';
     return symbol;
   };
 
@@ -60,6 +64,32 @@ export function HomeScreen() {
     if (amount < 0) return '#FF6B6B';
     if (amount > 0) return '#4CAF50';
     return '#F4A261';
+  };
+
+  const handleDeposit = async (vault: VaultInfo) => {
+    if (!selectedAccount) {
+      Alert.alert('Error', 'Please connect your wallet first.');
+      return;
+    }
+    console.log('Vault:', vault.tokenSymbol);
+
+    setSelectedVault(vault);
+    setShowDepositModal(true);
+  };
+
+  const handleDepositConfirm = async (vault: VaultInfo, amount: number): Promise<string> => {
+    try { 
+      setDepositing(vault.tokenSymbol);
+      console.log('Depositing to vault:', vault.tokenSymbol);
+      const signature = await depositToVault(amount, vault.tokenSymbol);
+      await refreshUserBalances();
+      return signature;
+    } catch (error) {
+      console.error('Error depositing:', error);
+      throw error;
+    } finally {
+      setDepositing(null);
+    }
   };
 
   const SimpleChart = () => (
@@ -110,7 +140,7 @@ export function HomeScreen() {
           </Card.Content>
         </Card>
         {/* Time Period Buttons */}
-        <View style={styles.periodButtons}>
+        {/* <View style={styles.periodButtons}>
           {['Daily', 'Monthly', 'Yearly'].map((period) => (
             <TouchableOpacity
               key={period}
@@ -128,7 +158,7 @@ export function HomeScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </View> */}
         {/* Investments Section */}
         <Text style={styles.sectionTitle}>Investments</Text>
 
@@ -148,7 +178,7 @@ export function HomeScreen() {
             return (
               <TouchableOpacity
                 key={vault.tokenSymbol}
-                onPress={() => (navigation as any).navigate('Vault')}
+                onPress={() => handleDeposit(vault)}
               >
                 <Card style={[
                   styles.investmentCard, 
@@ -174,7 +204,7 @@ export function HomeScreen() {
                       </Text>
                       <View style={styles.cardBottomRow}>
                         <View style={styles.apyCardBadge}>
-                          <Text style={styles.apyCardValue}>N/A</Text>
+                          <Text style={styles.apyCardValue}>{vault.apy}%</Text>
                         </View>
                         <Text style={styles.apyCardLabel}>APY (30days Avg.)</Text>
                       </View>
@@ -186,6 +216,16 @@ export function HomeScreen() {
           })}
         </ScrollView>
       </View>
+      <DepositModal
+        visible={showDepositModal}
+        vault={selectedVault}
+        onClose={() => {
+          setShowDepositModal(false);
+          setSelectedVault(null);
+        }}
+        onDeposit={handleDepositConfirm}
+        loading={depositing !== null}
+      />
     </ScrollView>
   );
 }
@@ -306,14 +346,20 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   investmentCardsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     paddingHorizontal: 0,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 10,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   investmentCard: {
     borderRadius: 16,
     elevation: 4,
     overflow: 'hidden',
-    width: 300,
+    width: 360,
     marginRight: 16,
     borderWidth: 0,
     borderColor: 'transparent',

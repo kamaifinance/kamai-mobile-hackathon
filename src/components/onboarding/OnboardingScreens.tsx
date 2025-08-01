@@ -21,13 +21,13 @@ const onboardingData = [
   {
     id: 1,
     title: "Welcome to Solana's ultimate yield farm.",
-    description: "Kamai is the best place to park long term assets for low risk yield all across Solana.",
+    description: "Kamai automatically moves your invested capital into the highest yielding protocols based on your risk preferences",
     visual: 'phone',
   },
   {
     id: 2,
     title: "Stablecoins, wBTCs, LSTs & More",
-    description: "Earn 2% - 10% more APY on your idle assets by putting them to work.",
+    description: "Earn 2% - 10% more APY on your idle assets by putting them to work in DeFi",
     visual: 'tokens',
   },
   {
@@ -93,6 +93,34 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
     </View>
   );
 
+  const renderThreeStepFeatures = () => (
+    <View style={styles.featuresContainer}>
+      <View style={styles.featureItem}>
+        <Text style={styles.featureNumber}>1</Text>
+        <View style={styles.featureContent}>
+          <Text style={styles.featureTitle}>Deposit Once</Text>
+          <Text style={styles.featureSubtitle}>By simply depositing once, your assets will be put to use in the lowest-risk yield sources across every protocol</Text>
+        </View>
+      </View>
+      
+      <View style={styles.featureItem}>
+        <Text style={styles.featureNumber}>2</Text>
+        <View style={styles.featureContent}>
+          <Text style={styles.featureTitle}>Automatic Solana Yield Shift</Text>
+          <Text style={styles.featureSubtitle}>Whenever a higher yield is found anywhere on Solana, your capital will shift there automatically</Text>
+        </View>
+      </View>
+      
+      <View style={styles.featureItem}>
+        <Text style={styles.featureNumber}>3</Text>
+        <View style={styles.featureContent}>
+          <Text style={styles.featureTitle}>You're Done</Text>
+          <Text style={styles.featureSubtitle}>And that's it. Deposit once and farm yield forever.</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderScreen = (item: typeof onboardingData[0], index: number) => {
     let visual;
     switch (item.visual) {
@@ -116,9 +144,19 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
           <Text style={styles.description}>{item.description}</Text>
         </View>
         
-        <View style={styles.visualContainer}>
-          {visual}
-        </View>
+        {/* For third screen, position asset as background behind features */}
+        {index === 2 ? (
+          <View style={styles.thirdScreenContent}>
+            <View style={styles.backgroundVisualContainer}>
+              {visual}
+            </View>
+            {renderThreeStepFeatures()}
+          </View>
+        ) : (
+          <View style={styles.visualContainer}>
+            {visual}
+          </View>
+        )}
 
         {/* Only show buttons on the last screen */}
         {index === onboardingData.length - 1 && (
@@ -206,15 +244,15 @@ const styles = StyleSheet.create({
     fontFamily: FontFamilies.Larken.Bold,
     color: '#DDB15B',
     textAlign: 'left',
-    marginBottom: 16,
+    marginBottom: 4,
     lineHeight: 34,
   },
   description: {
-    fontSize: 14,
-    fontFamily: FontFamilies.Larken.Regular,
-    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#9F9F9F',
     textAlign: 'left',
-    lineHeight: 24,
+    lineHeight: 16,
     opacity: 0.8,
   },
   buttonContainer: {
@@ -247,14 +285,83 @@ const styles = StyleSheet.create({
     color: '#1B3A32',
   },
 
+  // Third screen specific layout
+  thirdScreenContent: {
+    flex: 1,
+    position: 'relative',
+  },
+  backgroundVisualContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+    opacity: 0.6,
+  },
+
+  // Three-step features styles
+  featuresContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 16,
+    zIndex: 2,
+    position: 'relative',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(45, 56, 52, 0.9)',
+    borderRadius: 16,
+    padding: 16,
+    gap: 16,
+    minHeight: 80,
+  },
+  featureNumber: {
+    fontSize: 32,
+    fontFamily: FontFamilies.Saleha,
+    color: '#DDB15B',
+    lineHeight: 32,
+    width: 40,
+    height: 60,
+    marginTop: 10,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    alignSelf: 'center',
+    flexShrink: 0,
+  },
+  featureContent: {
+    flex: 1,
+    gap: 4,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontFamily: FontFamilies.Larken.Regular,
+    color: '#DDB15B',
+    lineHeight: 22,
+    marginBottom: 5,
+  },
+  featureSubtitle: {
+    fontSize: 9,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    lineHeight: 16,
+    opacity: 0.8,
+    marginBottom: 15,
+  },
+
   // Phone Visual Styles
   phoneContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   phoneImage: {
-    width: 600,
-    height: 620,
+    width: 650,
+    height: 650,
+    marginTop: 25,
+    marginRight:-50,
   },
   phoneImage2: {
     width: 500,

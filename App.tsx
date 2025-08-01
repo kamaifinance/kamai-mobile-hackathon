@@ -50,6 +50,19 @@ export default function App() {
     'Larken Medium Italic': require('./assets/fonts/Larken Medium Italic.ttf'),
     'Larken Thin': require('./assets/fonts/Larken Thin.ttf'),
     'Larken Thin Italic': require('./assets/fonts/Larken Thin Italic.ttf'),
+
+    // Geist font variants
+    'Geist': require('./assets/fonts/Geist-Regular.ttf'),
+    'Geist Bold': require('./assets/fonts/Geist-Bold.ttf'),
+    'Geist Medium': require('./assets/fonts/Geist-Medium.ttf'),
+    'Geist SemiBold': require('./assets/fonts/Geist-SemiBold.ttf'),
+    'Geist Light': require('./assets/fonts/Geist-Light.ttf'),
+    'Geist Black': require('./assets/fonts/Geist-Black.ttf'),
+    'Geist Black Italic': require('./assets/fonts/Geist-BlackItalic.ttf'),
+    'Geist ExtraBold': require('./assets/fonts/Geist-ExtraBold.ttf'),
+    'Geist ExtraBold Italic': require('./assets/fonts/Geist-ExtraBoldItalic.ttf'),
+    'Geist ExtraLight': require('./assets/fonts/Geist-ExtraLight.ttf'),
+    'Geist ExtraLight Italic': require('./assets/fonts/Geist-ExtraLightItalic.ttf'),
   });
 
   // Check if onboarding has been completed
