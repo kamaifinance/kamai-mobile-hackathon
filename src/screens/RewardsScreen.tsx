@@ -196,7 +196,6 @@ export function RewardsScreen() {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Rewards</Text>
             <Text style={styles.headerSubtitle2}>Earn points and unlock exclusive rewards</Text>
-            <Text style={styles.headerSubtitle}>Complete challenges to earn Kamai tokens and exclusive benefits</Text>
           </View>
 
           {/* Stats Card */}
