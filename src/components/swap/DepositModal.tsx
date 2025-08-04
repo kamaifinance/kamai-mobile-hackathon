@@ -14,7 +14,7 @@ import { Card } from 'react-native-paper';
 import { FontFamilies } from '../../styles/fonts';
 import { DammPool } from '../../utils/dammService';
 import { useAuthorization } from '../../utils/useAuthorization';
-import { useDammService } from '../../hooks/useDammService';
+import { useDammContext } from '../../context/DammProvider';
 
 interface DepositModalProps {
   visible: boolean;
@@ -35,7 +35,7 @@ export default function DepositModal({
   const [tokenBAmount, setTokenBAmount] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
   const { selectedAccount } = useAuthorization();
-  const { getUserBalance } = useDammService();
+  const { getUserBalance } = useDammContext();
   const isUpdatingRef = useRef(false);
 
   // Reset amounts when pool changes

@@ -25,6 +25,7 @@ import { AppNavigator } from "./src/navigators/AppNavigator";
 import { ClusterProvider } from "./src/components/cluster/cluster-data-access";
 import { OnboardingScreens } from "./src/components/onboarding";
 import { VaultProvider } from "./src/context";
+import { DammProvider } from "./src/context/DammProvider";
 
 const queryClient = new QueryClient();
 
@@ -143,15 +144,17 @@ export default function App() {
         <ClusterProvider>
           <ConnectionProvider config={{ commitment: "processed" }}>
             <VaultProvider preloadOnMount={false}>
-              <ImageBackground
-                source={require('./assets/kamai_mobile_bg.png')}
-                style={styles.backgroundImage}
-                resizeMode="cover"
-                onLayout={onLayoutRootView}
-              >
-                <StatusBar style="light" />
-                <OnboardingScreens onComplete={handleOnboardingComplete} />
-              </ImageBackground>
+              <DammProvider preloadOnMount={false}>
+                <ImageBackground
+                  source={require('./assets/kamai_mobile_bg.png')}
+                  style={styles.backgroundImage}
+                  resizeMode="cover"
+                  onLayout={onLayoutRootView}
+                >
+                  <StatusBar style="light" />
+                  <OnboardingScreens onComplete={handleOnboardingComplete} />
+                </ImageBackground>
+              </DammProvider>
             </VaultProvider>
           </ConnectionProvider>
         </ClusterProvider>
@@ -162,37 +165,39 @@ export default function App() {
   // Show main app
   return (
     <QueryClientProvider client={queryClient}>
-      <ClusterProvider>
-        <ConnectionProvider config={{ commitment: "processed" }}>
-          <VaultProvider>
-            <ImageBackground
-              source={require('./assets/kamai_mobile_bg.png')}
-              style={styles.backgroundImage}
-              resizeMode="cover"
-            >
-              <SafeAreaView
-                style={[
-                  styles.shell,
-                  {
-                    backgroundColor: 'transparent', // Make background transparent to show the image
-                  },
-                ]}
-                onLayout={onLayoutRootView}
-              >
-                <PaperProvider
-                  theme={
-                    colorScheme === "dark"
-                      ? CombinedDarkTheme
-                      : CombinedDefaultTheme
-                  }
+              <ClusterProvider>
+          <ConnectionProvider config={{ commitment: "processed" }}>
+            <VaultProvider>
+              <DammProvider>
+                <ImageBackground
+                  source={require('./assets/kamai_mobile_bg.png')}
+                  style={styles.backgroundImage}
+                  resizeMode="cover"
                 >
-                  <AppNavigator />
-                </PaperProvider>
-              </SafeAreaView>
-            </ImageBackground>
-          </VaultProvider>
-        </ConnectionProvider>
-      </ClusterProvider>
+                  <SafeAreaView
+                    style={[
+                      styles.shell,
+                      {
+                        backgroundColor: 'transparent', // Make background transparent to show the image
+                      },
+                    ]}
+                    onLayout={onLayoutRootView}
+                  >
+                    <PaperProvider
+                      theme={
+                        colorScheme === "dark"
+                          ? CombinedDarkTheme
+                          : CombinedDefaultTheme
+                      }
+                    >
+                      <AppNavigator />
+                    </PaperProvider>
+                  </SafeAreaView>
+                </ImageBackground>
+              </DammProvider>
+            </VaultProvider>
+          </ConnectionProvider>
+        </ClusterProvider>
     </QueryClientProvider>
   );
 }

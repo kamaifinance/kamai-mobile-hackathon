@@ -9,7 +9,7 @@ import { useAuthorization } from '../utils/useAuthorization';
 
 import DepositModal from '../components/vault/DepositModal';
 import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
-import { useDammService } from '../hooks/useDammService';
+import { useDammContext } from '../context/DammProvider';
 import LiquidityDepositModal from '../components/swap/DepositModal';
 import { DammPool } from '../utils/dammService';
 import { calculateFutureValue } from '../utils/vaultService';
@@ -54,7 +54,7 @@ export function HomeScreen() {
   const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
   const { selectedAccount } = useAuthorization();
   const { depositToVault } = useVaultService();
-  const { pools: dammPools, provideLiquidity, getQuote } = useDammService();
+  const { pools: dammPools, stats: dammStats, provideLiquidity, getQuote } = useDammContext();
 
   
   // Get SOL balance
@@ -318,12 +318,46 @@ export function HomeScreen() {
 
         {/* DAMM v1 Liquidity Pools Section */}
         <Text style={styles.sectionTitle}>Pools</Text>
-          <ScrollView
-            style={styles.investmentCards}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.investmentCardsContainer}
-          >
+        
+        {/* Pool Statistics Card */}
+        <Card style={styles.statsCard}>
+          <Card.Content style={styles.statsCardContent}>
+            <Text style={styles.statsCardTitle}>Pool Statistics</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  ${dammStats.totalLiquidity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </Text>
+                <Text style={styles.statLabel}>Total Liquidity</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  ${dammStats.totalVolume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </Text>
+                <Text style={styles.statLabel}>24h Volume</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  ${dammStats.totalFees24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </Text>
+                <Text style={styles.statLabel}>24h Fees</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>
+                  {dammStats.activePools}
+                </Text>
+                <Text style={styles.statLabel}>Active Pools</Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+        
+        <ScrollView
+          style={styles.investmentCards}
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.investmentCardsContainer}
+        >
             {dammPools.map((pool: DammPool) => (
               <TouchableOpacity
                 key={pool.id}
@@ -340,12 +374,12 @@ export function HomeScreen() {
                       </View>
                     </View>
                     <Text style={styles.swapVolume}>
-                      ${pool.volume24h.toLocaleString()} 24h Vol
+                      ${pool.liquidity.toLocaleString()} Liquidity
                     </Text>
                     <View style={styles.swapStats}>
                       <View style={styles.swapStat}>
-                        <Text style={styles.swapStatLabel}>APY</Text>
-                        <Text style={styles.swapStatValue}>{pool.apy.toFixed(1)}%</Text>
+                        <Text style={styles.swapStatLabel}>Volume</Text>
+                        <Text style={styles.swapStatValue}>${pool.volume24h.toLocaleString()}</Text>
                       </View>
                       <View style={styles.swapStat}>
                         <Text style={styles.swapStatLabel}>Fee</Text>
@@ -993,5 +1027,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#DDB15B',
     fontWeight: 'bold',
+  },
+  // Stats Card Styles
+  statsCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  statsCardContent: {
+    padding: 20,
+  },
+  statsCardTitle: {
+    fontSize: 18,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    width: '48%',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  statValue: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });

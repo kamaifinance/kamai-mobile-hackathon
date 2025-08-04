@@ -145,11 +145,11 @@ export function useDammService(): DammContextData {
     }
   };
 
-  // Initial load
-  useEffect(() => {
-    refreshPools();
-    refreshStats();
-  }, []);
+  // Initial load - removed to allow controlled preloading
+  // useEffect(() => {
+  //   refreshPools();
+  //   refreshStats();
+  // }, []);
 
   return {
     pools,

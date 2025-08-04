@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { FontFamilies } from '../../styles/fonts';
 import { useVaultContext } from '../../context/VaultProvider';
+import { useDammContext } from '../../context/DammProvider';
 
 interface OnboardingScreensProps {
   onComplete: () => void;
@@ -43,6 +44,7 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const hasPreloadedRef = useRef(false);
   const { preloadVaults } = useVaultContext();
+  const { preloadPools } = useDammContext();
 
   // Start preloading vaults when component mounts (only once)
   useEffect(() => {
@@ -51,12 +53,16 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
       
       const startPreloading = async () => {
         try {
-          console.log('Starting vault preloading during onboarding...');
-          await preloadVaults();
-          console.log('Vault preloading completed during onboarding');
+          console.log('Starting vault and pool preloading during onboarding...');
+          // Preload both vaults and pools in parallel
+          await Promise.all([
+            preloadVaults(),
+            preloadPools()
+          ]);
+          console.log('Vault and pool preloading completed during onboarding');
         } catch (error) {
-          console.warn('Failed to preload vaults during onboarding:', error);
-          // Don't block onboarding if vault preloading fails
+          console.warn('Failed to preload vaults/pools during onboarding:', error);
+          // Don't block onboarding if preloading fails
         }
       };
 
