@@ -7,19 +7,15 @@ import { Mint, unpackMint } from "@solana/spl-token";
 const DEVNET_RPC = 'https://api.devnet.solana.com/';
 const connection = new Connection(DEVNET_RPC, { commitment: 'confirmed' })
 
-// Token addresses for supported vaults
+// Token addresses for supported vaults - only SOL now
 const SUPPORTED_TOKENS = {
   // LSTs (Liquid Staking Tokens)
   SOL: 'So11111111111111111111111111111111111111112',
-  
-  // Stables (Stablecoins)  
-  USDC: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr'
 };
 
-// Token categories
+// Token categories - only LSTs now
 export const TOKEN_CATEGORIES = {
-  LSTS: 'LSTs',
-  STABLES: 'Stables'
+  LSTS: 'LSTs'
 } as const;
 
 const keeperBaseUrl = "https://merv2-api.meteora.ag";
@@ -30,6 +26,37 @@ const lendingProgramIdsToName = new Map<string, string>([
   ["KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD", "Kamino"],
 ]);
 
+// SOL price fetching function
+async function getSolPrice(): Promise<number> {
+  try {
+    // Using CoinGecko API to get SOL price
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd');
+    
+    if (!response.ok) {
+      throw new Error(`Price API response not ok: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const price = data.solana?.usd;
+    
+    if (!price || isNaN(price)) {
+      throw new Error('Invalid SOL price data from API');
+    }
+    
+    return price;
+  } catch (error) {
+    console.warn('Failed to fetch SOL price:', error);
+    // Return a fallback price if API fails
+    return 100; // Fallback price
+  }
+}
+
+// Calculate future value based on APY and time period
+export function calculateFutureValue(principal: number, apy: number, days: number): number {
+  const dailyRate = apy / 100 / 365;
+  const futureValue = principal * Math.pow(1 + dailyRate, days);
+  return Math.round(futureValue * 100) / 100; // Round to 2 decimal places
+}
 
 
 // //   vaultImpl: VaultImpl,
@@ -390,13 +417,7 @@ export const getSolVault = async (): Promise<VaultImpl> => {
   return await getVault(new PublicKey(SUPPORTED_TOKENS.SOL));
 };
 
-/**
- * Get vault instance for USDC token  
- * @returns VaultImpl instance for USDC
- */
-export const getUsdcVault = async (): Promise<VaultImpl> => {
-  return await getVault(new PublicKey(SUPPORTED_TOKENS.USDC));
-};
+
 
 /**
  * Get available Meteora vaults on devnet
@@ -411,84 +432,74 @@ export const getVaults = async (): Promise<any> => {
     const tokenMap = new StaticTokenListResolutionStrategy().resolve();
     console.log('Token map resolved:', tokenMap.length);
     
-    // Get token info for all supported tokens
+    // Get token info for SOL only
     const SOL_TOKEN_INFO = tokenMap.find(token => token.symbol === 'SOL') as TokenInfo;
-    const USDC_TOKEN_INFO = tokenMap.find(token => token.symbol === 'USDC-Dev') as TokenInfo;
 
     if (!SOL_TOKEN_INFO) {
       throw new Error('SOL token not found in token registry');
     }
-    if (!USDC_TOKEN_INFO) {
-      throw new Error('USDC token not found in token registry');
-    }
 
-    // Create vaults for supported tokens with categories
-    const vaultConfigs = [
-      { 
-        token: SOL_TOKEN_INFO, 
-        name: "Boosted SOL Vault", 
-        symbol: "SOL", 
-        baseDescription: 'Earn yield on your SOL with dynamic strategies',
-        category: TOKEN_CATEGORIES.LSTS
-      },
-      { 
-        token: USDC_TOKEN_INFO, 
-        name: "Boosted USDC Vault", 
-        symbol: "USDC", 
-        baseDescription: 'Earn yield on your USDC with dynamic strategies',
-        category: TOKEN_CATEGORIES.STABLES
-      }
-    ];
+    // Get live SOL price
+    const solPrice = await getSolPrice();
+    console.log('Current SOL price:', solPrice);
 
-    for (const vaultConfig of vaultConfigs) {
+    // Create vault for SOL only
+    const vaultConfig = { 
+      token: SOL_TOKEN_INFO, 
+      name: "LSTs Vault", 
+      symbol: "SOL", 
+      baseDescription: 'Earn yield on your SOL with dynamic strategies',
+      category: TOKEN_CATEGORIES.LSTS
+    };
+
+    try {
+      console.log(`Creating vault for ${vaultConfig.symbol}...`);
+      const vault: VaultImpl = await VaultImpl.create(
+        connection,
+        new PublicKey(vaultConfig.token.address),
+        { cluster: 'devnet' }
+      );
+
+      console.log(`Vault created successfully for ${vaultConfig.symbol}:`, !!vault);
+
+      // Get real vault details instead of hardcoded values
+      console.log(`Fetching real vault details for ${vaultConfig.symbol}...`);
+      
+      let vaultDetails;
+      let description = vaultConfig.baseDescription;
+      let apy = 0;
+      let totalValueLocked = 0;
+      let withdrawableAmount = 0;
+      let virtualPrice = 0;
+      
       try {
-        console.log(`Creating vault for ${vaultConfig.symbol}...`);
-        const vault: VaultImpl = await VaultImpl.create(
-          connection,
-          new PublicKey(vaultConfig.token.address),
-          { cluster: 'devnet' }
-        );
-
-        console.log(`Vault created successfully for ${vaultConfig.symbol}:`, !!vault);
-
-        // Get real vault details instead of hardcoded values
-        console.log(`Fetching real vault details for ${vaultConfig.symbol}...`);
-        
-        let vaultDetails;
-        let description = vaultConfig.baseDescription;
-        let apy = 0;
-        let totalValueLocked = 0;
-        let withdrawableAmount = 0;
-        let virtualPrice = 0;
-        
-        try {
-          vaultDetails = await getVaultDetails(vault, vaultConfig.token.address);
-          description = `${vaultConfig.baseDescription} (Current APY: ${vaultDetails.closest_apy}%)`;
-          apy = vaultDetails.closest_apy;
-          totalValueLocked = vaultDetails.totalAmount;
-          withdrawableAmount = vaultDetails.withdrawableAmount;
-          virtualPrice = vaultDetails.virtualPrice;
-        } catch (detailsError) {
-          console.warn(`Failed to fetch vault details for ${vaultConfig.symbol}, using fallback values:`, detailsError);
-          // Fallback to basic description without APY
-          description = vaultConfig.baseDescription;
-        }
-
-        vaults.push({
-          vault: vault,
-          name: vaultConfig.name,
-          tokenSymbol: vaultConfig.symbol,
-          description: description,
-          apy: apy, // Real APY from keeper API or 0 as fallback
-          totalValueLocked: totalValueLocked, // Real TVL or 0 as fallback
-          withdrawableAmount: withdrawableAmount, // Real withdrawable amount or 0 as fallback
-          virtualPrice: virtualPrice, // Real virtual price or 0 as fallback
-          category: vaultConfig.category,
-        });
-      } catch (error) {
-        console.error(`Failed to create vault for ${vaultConfig.symbol}:`, error);
-        // Continue with other vaults even if one fails
+        vaultDetails = await getVaultDetails(vault, vaultConfig.token.address);
+        description = `${vaultConfig.baseDescription} (Current APY: ${vaultDetails.closest_apy}%)`;
+        apy = vaultDetails.closest_apy;
+        totalValueLocked = vaultDetails.totalAmount;
+        withdrawableAmount = vaultDetails.withdrawableAmount;
+        virtualPrice = vaultDetails.virtualPrice;
+      } catch (detailsError) {
+        console.warn(`Failed to fetch vault details for ${vaultConfig.symbol}, using fallback values:`, detailsError);
+        // Fallback to basic description without APY
+        description = vaultConfig.baseDescription;
       }
+
+      vaults.push({
+        vault: vault,
+        name: vaultConfig.name,
+        tokenSymbol: vaultConfig.symbol,
+        description: description,
+        apy: apy, // Real APY from keeper API or 0 as fallback
+        totalValueLocked: totalValueLocked, // Real TVL or 0 as fallback
+        withdrawableAmount: withdrawableAmount, // Real withdrawable amount or 0 as fallback
+        virtualPrice: virtualPrice, // Real virtual price or 0 as fallback
+        category: vaultConfig.category,
+        solPrice: solPrice, // Add SOL price to vault info
+      });
+    } catch (error) {
+      console.error(`Failed to create vault for ${vaultConfig.symbol}:`, error);
+      throw error;
     }
 
     return vaults;
@@ -499,28 +510,23 @@ export const getVaults = async (): Promise<any> => {
 };
 
 /**
- * Get user's balance in a specific vault
+ * Get user's balance in SOL vault
  * @param userPublicKey - User's public key
- * @param vaultType - Type of vault ('SOL', 'USDC')
+ * @param vaultType - Type of vault ('SOL' only)
  * @returns Object containing user's withdrawable amount from the vault
  */
 export const getUserVaultBalance = async (userPublicKey: PublicKey, vaultType: string = 'SOL') => {
   try {
-    const tokenMap = new StaticTokenListResolutionStrategy().resolve();
-    let tokenInfo: TokenInfo;
-    
-    switch (vaultType.toUpperCase()) {
-      case 'USDC':
-        tokenInfo = tokenMap.find(token => token.symbol === 'USDC-Dev') as TokenInfo;
-        break;
-      case 'SOL':
-      default:
-        tokenInfo = tokenMap.find(token => token.symbol === 'SOL') as TokenInfo;
-        break;
+    // Only support SOL vault
+    if (vaultType.toUpperCase() !== 'SOL') {
+      throw new Error('Only SOL vault is supported');
     }
+
+    const tokenMap = new StaticTokenListResolutionStrategy().resolve();
+    const tokenInfo = tokenMap.find(token => token.symbol === 'SOL') as TokenInfo;
     
     if (!tokenInfo) {
-      throw new Error(`${vaultType} token not found in token registry`);
+      throw new Error('SOL token not found in token registry');
     }
     
     const vault = await getVault(new PublicKey(tokenInfo.address));
@@ -548,7 +554,7 @@ export const getUserVaultBalance = async (userPublicKey: PublicKey, vaultType: s
       vaultType: vaultType
     };
   } catch (error) {
-    console.error(`Error getting user ${vaultType} vault balance:`, error);
+    console.error(`Error getting user SOL vault balance:`, error);
     return {
       userLpBalance: 0,
       withdrawableAmount: 0,
@@ -560,10 +566,9 @@ export const getUserVaultBalance = async (userPublicKey: PublicKey, vaultType: s
 
 /**
  * Deposit tokens into Meteora vault.
- * @param signAndSendTransaction - Function to sign and send transaction
  * @param publicKey - User's public key
  * @param amount - Amount in tokens (not smallest unit), e.g. 0.01 for 0.01 SOL
- * @param vaultType - Type of vault ('SOL', 'USDC')
+ * @param vaultType - Type of vault ('SOL' only)
  * @returns transaction signature string
  */
 export const depositToVault = async (
@@ -576,54 +581,44 @@ export const depositToVault = async (
     console.log('Deposit amount:', amount);
     console.log('Vault type:', vaultType);
     console.log('Public key:', publicKey.toString());
+    
     // Validate amount
     if (!amount || amount <= 0) {
       throw new Error('Invalid deposit amount. Amount must be greater than 0.');
     }
 
-    // Get token info based on vault type
+    // Only support SOL vault
+    if (vaultType.toUpperCase() !== 'SOL') {
+      throw new Error('Only SOL vault is supported');
+    }
+
+    // Get token info for SOL
     console.log('Resolving token list...');
     let tokenMap, tokenInfo;
     try {
       tokenMap = new StaticTokenListResolutionStrategy().resolve();
-      
-      switch (vaultType.toUpperCase()) {
-        case 'USDC':
-          tokenInfo = tokenMap.find(token => token.symbol === 'USDC-Dev');
-          break;
-        case 'SOL':
-        default:
-          tokenInfo = tokenMap.find(token => token.symbol === 'SOL');
-          break;
-      }
+      tokenInfo = tokenMap.find(token => token.symbol === 'SOL');
 
       if (!tokenInfo) {
-        throw new Error(`${vaultType} token info not found in token registry`);
+        throw new Error('SOL token info not found in token registry');
       }
 
-      console.log(`${vaultType} token address:`, tokenInfo.address);
+      console.log('SOL token address:', tokenInfo.address);
     } catch (tokenError: any) {
       console.error('Token resolution failed:', tokenError);
-      throw new Error(`Failed to resolve ${vaultType} token info: ${tokenError?.message || 'Unknown token error'}`);
+      throw new Error(`Failed to resolve SOL token info: ${tokenError?.message || 'Unknown token error'}`);
     }
 
-    // Check user's balance for the specific token
-    console.log('Checking user balance...');
+    // Check user's SOL balance
+    console.log('Checking user SOL balance...');
     let balance, balanceInTokens;
     try {
-      if (vaultType.toUpperCase() === 'SOL') {
-        // For SOL, check native balance
-        balance = await connection.getBalance(publicKey);
-        balanceInTokens = balance / 10**9;
-        console.log('User SOL balance:', balanceInTokens);
-        
-        if (balanceInTokens < amount + 0.01) { // Need extra for transaction fees
-          throw new Error(`Insufficient SOL balance. You have ${balanceInTokens.toFixed(4)} SOL but need ${amount + 0.01} SOL (including fees).`);
-        }
-      } else {
-        // For other tokens, you would need to check token balance
-        // This is a simplified version - in production you'd check the actual token balance
-        console.log(`Balance check for ${vaultType} tokens not implemented yet`);
+      balance = await connection.getBalance(publicKey);
+      balanceInTokens = balance / 10**9;
+      console.log('User SOL balance:', balanceInTokens);
+      
+      if (balanceInTokens < amount + 0.01) { // Need extra for transaction fees
+        throw new Error(`Insufficient SOL balance. You have ${balanceInTokens.toFixed(4)} SOL but need ${amount + 0.01} SOL (including fees).`);
       }
     } catch (balanceError: any) {
       console.error('Balance check failed:', balanceError);
@@ -631,7 +626,7 @@ export const depositToVault = async (
     }
 
     // Create vault instance
-    console.log(`Creating vault instance for ${vaultType}...`);
+    console.log('Creating SOL vault instance...');
     console.log('Using token address:', tokenInfo.address);
     
     let vault;
@@ -658,7 +653,7 @@ export const depositToVault = async (
     console.log('Deposit amount in smallest units:', depositAmount.toString());
     
     if (depositAmount.isZero()) {
-      throw new Error(`Deposit amount too small. Minimum deposit is ${1 / Math.pow(10, decimals)} ${vaultType}.`);
+      throw new Error(`Deposit amount too small. Minimum deposit is ${1 / Math.pow(10, decimals)} SOL.`);
     }
     
     const depositTx = await vault.deposit(publicKey, depositAmount);

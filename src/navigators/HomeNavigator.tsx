@@ -3,6 +3,7 @@ import React from "react";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ExploreScreen } from "../screens/ExploreScreen";
+import { RewardsScreen } from "../screens/RewardsScreen";
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 import { useTheme } from "react-native-paper";
 import { View, TouchableOpacity, Text, AccessibilityState, GestureResponderEvent } from "react-native";
@@ -112,6 +113,16 @@ export function HomeNavigator() {
           tabBarLabel: "Explore",
           tabBarButton: (props) => (
             <CustomTabBarButton {...props} label="Explore" iconName="compass-outline" iconNameFocused="compass" />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="Rewards" 
+        component={RewardsScreen}
+        options={{ 
+          tabBarLabel: "Rewards",
+          tabBarButton: (props) => (
+            <CustomTabBarButton {...props} label="Rewards" iconName="gift-outline" iconNameFocused="gift" />
           ),
         }}
       />

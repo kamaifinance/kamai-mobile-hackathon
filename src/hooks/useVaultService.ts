@@ -21,6 +21,7 @@ export interface VaultInfo {
   withdrawableAmount?: number;
   virtualPrice?: number;
   category?: string;
+  solPrice?: number;    // SOL price in USD
 }
 
 export interface UserVaultBalance {

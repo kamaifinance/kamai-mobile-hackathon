@@ -40,8 +40,7 @@ export default function DepositModal({
 
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
-    if (symbol === 'SOL') return 'Boosted';
-    if (symbol === 'USDC') return 'Protected';
+    if (symbol === 'SOL') return 'LSTs';
     return symbol;
   };
 
@@ -111,7 +110,7 @@ export default function DepositModal({
               {vault && (
                 <View style={[styles.vaultInfoCard, getVaultCardStyle(vault.tokenSymbol)]}>
                   <ImageBackground
-                    source={vault.tokenSymbol === 'USDC' ? require('../../../assets/vault_normal.png') : require('../../../assets/vault_boosted.png')}
+                    source={require('../../../assets/vault_boosted.png')}
                     style={styles.vaultCardBackground}
                     resizeMode="cover"
                   >

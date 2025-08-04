@@ -1,13 +1,20 @@
 import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image, Text } from "react-native";
+import { StyleSheet, View, ScrollView, TouchableOpacity, ImageBackground, Image, Text, TextInput, ActivityIndicator, Alert } from "react-native";
 import { Card } from "react-native-paper";
 import { FontFamilies } from "../styles/fonts";
 import { LineChart } from "react-native-gifted-charts";
 import { useVaultContext } from '../context';
 import { VaultInfo, UserVaultBalance, useVaultService } from '../hooks/useVaultService';
 import { useAuthorization } from '../utils/useAuthorization';
+
 import DepositModal from '../components/vault/DepositModal';
 import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
+import { useDammService } from '../hooks/useDammService';
+import LiquidityDepositModal from '../components/swap/DepositModal';
+import { DammPool } from '../utils/dammService';
+import { calculateFutureValue } from '../utils/vaultService';
+import { useGetBalance } from '../components/account/account-data-access';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -35,24 +42,55 @@ const generatePortfolioData = () => {
 const portfolioData = generatePortfolioData();
 
 export function HomeScreen() {
-  const [selectedPeriod, setSelectedPeriod] = useState('Daily');
+  const [selectedPeriod, setSelectedPeriod] = useState('Now');
   const [depositing, setDepositing] = useState<string | null>(null);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
   const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
+  const [showLiquidityModal, setShowLiquidityModal] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<DammPool | null>(null);
+  const [depositingLiquidity, setDepositingLiquidity] = useState(false);
   const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
   const { selectedAccount } = useAuthorization();
   const { depositToVault } = useVaultService();
+  const { pools: dammPools, provideLiquidity, getQuote } = useDammService();
+
+  
+  // Get SOL balance
+  const solBalanceQuery = useGetBalance({ 
+    address: selectedAccount?.publicKey! 
+  });
+  const solBalance = selectedAccount && solBalanceQuery.data 
+    ? (solBalanceQuery.data / LAMPORTS_PER_SOL).toFixed(4)
+    : '0.00';
 
   // All vault data is now handled by VaultContext
 
-  // Aggregate total balance
-  const totalBalance = vaults.reduce((sum: number, v: VaultInfo) => sum + (userBalances[v.tokenSymbol]?.withdrawableAmount || 0), 0);
+
+
+  // Aggregate total balance in USD
+  const totalBalance = vaults.reduce((sum: number, v: VaultInfo) => {
+    const userBalance = userBalances[v.tokenSymbol]?.withdrawableAmount || 0;
+    const solPrice = (v as any).solPrice || 100; // Get SOL price from vault info
+    return sum + (userBalance * solPrice);
+  }, 0);
+
+  // Calculate estimated value based on selected period and vault APY
+  const calculateEstimatedValue = () => {
+    if (selectedPeriod === 'Now') return totalBalance;
+    
+    const days = parseInt(selectedPeriod);
+    const totalApy = vaults.reduce((sum: number, v: VaultInfo) => {
+      return sum + (v.apy || 0);
+    }, 0) / Math.max(vaults.length, 1); // Average APY across all vaults
+    
+    return calculateFutureValue(totalBalance, totalApy, days);
+  };
 
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
-    if (symbol === 'SOL') return 'Boosted';
-    if (symbol === 'USDC') return 'Protected';
+    if (symbol === 'SOL') return 'LSTs';
     return symbol;
   };
 
@@ -94,6 +132,35 @@ export function HomeScreen() {
     }
   };
 
+  const handleLiquidityDeposit = async (pool: DammPool, tokenAAmount: number, tokenBAmount: number): Promise<string> => {
+    if (!selectedAccount) {
+      throw new Error('Wallet not connected');
+    }
+    
+    try {
+      setDepositingLiquidity(true);
+      console.log('Adding liquidity:', tokenAAmount, tokenBAmount);
+      const result = await provideLiquidity(selectedAccount.publicKey, pool.id, tokenAAmount, tokenBAmount);
+      return result.transaction.signatures[0] || 'Transaction completed';
+    } catch (error) {
+      console.error('Error adding liquidity:', error);
+      throw error;
+    } finally {
+      setDepositingLiquidity(false);
+    }
+  };
+
+  const handleLiquidityPress = (pool: DammPool) => {
+    if (!selectedAccount) {
+      setShowConnectWalletAlert(true);
+      return;
+    }
+    setSelectedPool(pool);
+    setShowLiquidityModal(true);
+  };
+
+
+
   const SimpleChart = () => (
     <View style={styles.chartContainer}>
       <LineChart
@@ -132,35 +199,54 @@ export function HomeScreen() {
         <Card style={styles.totalValueCard}>
           <Card.Content style={styles.totalValueContent}>
             <Text style={styles.totalValueLabel}>Total Value</Text>
-            <Text style={styles.totalValueAmount}>
-              ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-            <View style={styles.apyBadge}>
-              <Text style={styles.apyText}>Aggregated</Text>
+            
+            {/* Value Display */}
+            <View style={styles.valueDisplayContainer}>
+              {selectedPeriod === 'Now' ? (
+                <Text style={styles.currentValueAmount}>
+                  ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              ) : (
+                <>
+                  <Text style={styles.strikethroughValue}>
+                    ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                  <Text style={styles.estimatedValueAmount}>
+                    ${calculateEstimatedValue().toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </>
+              )}
             </View>
-            {/* Optionally keep the chart here */}
+            
+            {/* Time Period Buttons */}
+            <View style={styles.periodButtons}>
+              {['Now', '60', '90'].map((period) => (
+                <TouchableOpacity
+                  key={period}
+                  style={[
+                    styles.periodButton,
+                    selectedPeriod === period && styles.selectedPeriodButton
+                  ]}
+                  onPress={() => setSelectedPeriod(period)}
+                >
+                  <Text style={[
+                    styles.periodButtonText,
+                    selectedPeriod === period && styles.selectedPeriodButtonText
+                  ]}>
+                    {period === 'Now' ? period : `${period} Days`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            
+            {/* Disclaimer */}
+            {selectedPeriod !== 'Now' && (
+              <Text style={styles.disclaimerText}>
+                *Approx. projection based on current APY
+              </Text>
+            )}
           </Card.Content>
         </Card>
-        {/* Time Period Buttons */}
-        {/* <View style={styles.periodButtons}>
-          {['Daily', 'Monthly', 'Yearly'].map((period) => (
-            <TouchableOpacity
-              key={period}
-              style={[
-                styles.periodButton,
-                selectedPeriod === period && styles.selectedPeriodButton
-              ]}
-              onPress={() => setSelectedPeriod(period)}
-            >
-              <Text style={[
-                styles.periodButtonText,
-                selectedPeriod === period && styles.selectedPeriodButtonText
-              ]}>
-                {period}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View> */}
         {/* Investments Section */}
         <Text style={styles.sectionTitle}>Investments</Text>
 
@@ -174,8 +260,8 @@ export function HomeScreen() {
             const userBalance = userBalances[vault.tokenSymbol];
             const vaultType = getVaultType(vault.tokenSymbol);
             const withdrawableAmount = userBalance?.withdrawableAmount || 0;
-            const isProtected = vaultType === 'Protected';
-            const isBoosted = vaultType === 'Boosted';
+            const solPrice = (vault as any).solPrice || 100;
+            const usdValue = withdrawableAmount * solPrice;
             
             return (
               <TouchableOpacity
@@ -184,11 +270,10 @@ export function HomeScreen() {
               >
                 <Card style={[
                   styles.investmentCard, 
-                  isProtected ? styles.protectedCard : 
-                  isBoosted ? styles.boostedCard : styles.premiumCard
+                  styles.boostedCard
                 ]}>
                   <ImageBackground
-                    source={isProtected ? require('../../assets/vault_normal.png') : require('../../assets/vault_boosted.png')}
+                    source={require('../../assets/vault_boosted.png')}
                     style={styles.cardBackgroundImage}
                     resizeMode="cover"
                   >
@@ -201,14 +286,27 @@ export function HomeScreen() {
                           resizeMode="contain"
                         />
                       </View>
-                      <Text style={styles.investmentAmount}>
-                        ${withdrawableAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </Text>
+                      <View style={styles.amountContainer}>
+                        <Text style={styles.solAmount}>
+                          {withdrawableAmount.toFixed(4)} SOL
+                        </Text>
+                        <Text style={styles.usdValue}>
+                          ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Text>
+                      </View>
                       <View style={styles.cardBottomRow}>
                         <View style={styles.apyCardBadge}>
                           <Text style={styles.apyCardValue}>{vault.apy}%</Text>
                         </View>
-                        <Text style={styles.apyCardLabel}>APY (30days Avg.)</Text>
+                        <Text style={styles.apyCardLabel}>APY</Text>
+                      </View>
+                      
+                      {/* DEVNET Chip */}
+                      <View style={styles.devnetChipContainer}>
+                        <View style={styles.devnetChip}>
+                          <Text style={styles.devnetChipText}>DEVNET</Text>
+                        </View>
+                        <Text style={styles.devnetNote}>Mainnet will have better APYs</Text>
                       </View>
                     </Card.Content>
                   </ImageBackground>
@@ -217,6 +315,54 @@ export function HomeScreen() {
             );
           })}
         </ScrollView>
+
+        {/* DAMM v1 Liquidity Pools Section */}
+        <Text style={styles.sectionTitle}>Liquidity Pools</Text>
+          <ScrollView
+            style={styles.investmentCards}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.investmentCardsContainer}
+          >
+            {dammPools.map((pool: DammPool) => (
+              <TouchableOpacity
+                key={pool.id}
+                onPress={() => handleLiquidityPress(pool)}
+              >
+                <Card style={styles.swapCard}>
+                  <Card.Content style={styles.swapCardContent}>
+                    <View style={styles.swapHeader}>
+                      <Text style={styles.swapPair}>
+                        {pool.tokenASymbol}/{pool.tokenBSymbol}
+                      </Text>
+                      <View style={styles.swapBadge}>
+                        <Text style={styles.swapBadgeText}>DEVNET</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.swapVolume}>
+                      ${pool.volume24h.toLocaleString()} 24h Vol
+                    </Text>
+                    <View style={styles.swapStats}>
+                      <View style={styles.swapStat}>
+                        <Text style={styles.swapStatLabel}>APY</Text>
+                        <Text style={styles.swapStatValue}>{pool.apy.toFixed(1)}%</Text>
+                      </View>
+                      <View style={styles.swapStat}>
+                        <Text style={styles.swapStatLabel}>Fee</Text>
+                        <Text style={styles.swapStatValue}>{(pool.fee * 100).toFixed(2)}%</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.swapButton}
+                      onPress={() => handleLiquidityPress(pool)}
+                    >
+                      <Text style={styles.swapButtonText}>Add Liquidity</Text>
+                    </TouchableOpacity>
+                  </Card.Content>
+                </Card>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
       </View>
       <DepositModal
         visible={showDepositModal}
@@ -232,6 +378,17 @@ export function HomeScreen() {
         visible={showConnectWalletAlert}
         onDismiss={() => setShowConnectWalletAlert(false)}
       />
+      <LiquidityDepositModal
+        visible={showLiquidityModal}
+        pool={selectedPool}
+        onClose={() => {
+          setShowLiquidityModal(false);
+          setSelectedPool(null);
+        }}
+        onDeposit={handleLiquidityDeposit}
+        loading={depositingLiquidity}
+      />
+
     </ScrollView>
   );
 }
@@ -295,6 +452,54 @@ const styles = StyleSheet.create({
     borderColor: '#2B3834',
     boxShadow: '0px 0px 10px 0px rgba(0, 0, 0, 0.5)',
   },
+  estimatedValueContainer: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  estimatedValueLabel: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+
+  valueDisplayContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  currentValueAmount: {
+    fontSize: 40,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+    textAlign: 'center',
+  },
+  strikethroughValue: {
+    fontSize: 24,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#666666',
+    textDecorationLine: 'line-through',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  estimatedValueAmount: {
+    fontSize: 40,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+    textAlign: 'center',
+  },
+  disclaimerText: {
+    fontSize: 10,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.6,
+    textAlign: 'center',
+    marginTop: 8,
+  },
   chartContainer: {
     flex: 1,
     minHeight: 140,
@@ -320,7 +525,7 @@ const styles = StyleSheet.create({
   },
   periodButtons: {
     flexDirection: 'row',
-    marginBottom: 32,
+    marginTop: 16,
     backgroundColor: 'rgba(13, 69, 50, 0.3)',
     borderRadius: 12,
     padding: 4,
@@ -444,6 +649,22 @@ const styles = StyleSheet.create({
     color: '#DDB15B',
     marginBottom: 20,
   },
+  amountContainer: {
+    marginBottom: 16,
+  },
+  solAmount: {
+    fontSize: 24,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+    marginBottom: 4,
+  },
+  usdValue: {
+    fontSize: 18,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -465,5 +686,312 @@ const styles = StyleSheet.create({
     fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
     opacity: 0.7,
+  },
+  devnetChipContainer: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    alignItems: 'center',
+  },
+  devnetChip: {
+    backgroundColor: '#DDB15B',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
+  devnetChipText: {
+    fontSize: 10,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#000000',
+  },
+  devnetNote: {
+    fontSize: 8,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#000000',
+    textAlign: 'center',
+  },
+  // Swap card styles
+  swapCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    elevation: 4,
+    overflow: 'hidden',
+    width: 360,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  swapCardContent: {
+    padding: 20,
+    position: 'relative',
+  },
+  swapHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  swapPair: {
+    fontSize: 18,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#DDB15B',
+  },
+  swapBadge: {
+    backgroundColor: '#DDB15B',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  swapBadgeText: {
+    fontSize: 10,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#000000',
+  },
+  swapVolume: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  swapStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  swapStat: {
+    alignItems: 'center',
+  },
+  swapStatLabel: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+  swapStatValue: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#DDB15B',
+  },
+  swapButton: {
+    backgroundColor: '#DDB15B',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  swapButtonText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#000000',
+  },
+  // Tab styles
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(13, 69, 50, 0.3)',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#0D4532',
+  },
+  tabText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+  },
+  // Swap tab content
+  swapTabContent: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 32,
+  },
+  swapInputContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  swapTokenHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  tokenIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tokenDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(221, 177, 91, 0.1)',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  tokenIcon: {
+    fontSize: 18,
+    marginRight: 8,
+    color: '#DDB15B',
+  },
+  tokenSymbol: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+    marginRight: 4,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    color: '#DDB15B',
+  },
+  balanceText: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.6,
+  },
+  swapInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  swapAmountInput: {
+    flex: 1,
+    fontSize: 32,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#FFFFFF',
+    marginRight: 12,
+  },
+  percentageButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  percentageButton: {
+    backgroundColor: 'rgba(221, 177, 91, 0.2)',
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  percentageButtonText: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#DDB15B',
+  },
+  swapArrowContainer: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  swapArrow: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  swapArrowText: {
+    fontSize: 20,
+    color: '#DDB15B',
+  },
+  swapOutputRow: {
+    alignItems: 'flex-start',
+  },
+  swapOutputAmount: {
+    fontSize: 32,
+    fontFamily: FontFamilies.Larken.Bold,
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+  quoteDetailsContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+  },
+  quoteDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quoteDetailLabel: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
+  },
+  quoteDetailValue: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+  },
+  swapExecuteButton: {
+    backgroundColor: '#DDB15B',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  swapExecuteButtonDisabled: {
+    backgroundColor: 'rgba(221, 177, 91, 0.3)',
+  },
+  swapExecuteButtonText: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#000000',
+  },
+  // Dropdown styles
+  dropdownMenu: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2B3834',
+    zIndex: 1000,
+    maxHeight: 150,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2B3834',
+  },
+  dropdownItemSelected: {
+    backgroundColor: 'rgba(221, 177, 91, 0.1)',
+  },
+  dropdownItemText: {
+    fontSize: 16,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+    marginLeft: 8,
+    flex: 1,
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#DDB15B',
+    fontWeight: 'bold',
   },
 });

@@ -57,11 +57,8 @@ export function VaultProvider({ children, preloadOnMount = true }: VaultProvider
       setError(null);
       
       const availableVaults = await getVaults();
-      // Only keep the two supported vaults in the correct order
-      const vaultOrder = ['SOL', 'USDC'];
-      const filteredVaults = vaultOrder.map(symbol => 
-        availableVaults.find((v: any) => v.tokenSymbol === symbol)
-      ).filter(Boolean) as VaultInfo[];
+      // Only keep SOL vault
+      const filteredVaults = availableVaults.filter((v: any) => v.tokenSymbol === 'SOL') as VaultInfo[];
       
       setVaults(filteredVaults);
       
