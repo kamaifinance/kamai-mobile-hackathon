@@ -320,7 +320,7 @@ export function HomeScreen() {
         <Text style={styles.sectionTitle}>Pools</Text>
         
         {/* Pool Statistics Card */}
-        <Card style={styles.statsCard}>
+        {/* <Card style={styles.statsCard}>
           <Card.Content style={styles.statsCardContent}>
             <Text style={styles.statsCardTitle}>Pool Statistics</Text>
             <View style={styles.statsGrid}>
@@ -350,7 +350,7 @@ export function HomeScreen() {
               </View>
             </View>
           </Card.Content>
-        </Card>
+        </Card> */}
         
         <ScrollView
           style={styles.investmentCards}
@@ -373,9 +373,9 @@ export function HomeScreen() {
                         <Text style={styles.swapBadgeText}>DEVNET</Text>
                       </View>
                     </View>
-                    <Text style={styles.swapVolume}>
+                    {/* <Text style={styles.swapVolume}>
                       ${pool.liquidity.toLocaleString()} Liquidity
-                    </Text>
+                    </Text> */}
                     <View style={styles.swapStats}>
                       <View style={styles.swapStat}>
                         <Text style={styles.swapStatLabel}>Volume</Text>

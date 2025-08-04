@@ -34,6 +34,8 @@ export default function DepositModal({
   const [tokenAAmount, setTokenAAmount] = useState('');
   const [tokenBAmount, setTokenBAmount] = useState('');
   const [depositLoading, setDepositLoading] = useState(false);
+  const [userBalances, setUserBalances] = useState<{ tokenA: number; tokenB: number }>({ tokenA: 0, tokenB: 0 });
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const { selectedAccount } = useAuthorization();
   const { getUserBalance } = useDammContext();
   const isUpdatingRef = useRef(false);
@@ -43,8 +45,29 @@ export default function DepositModal({
     if (pool) {
       setTokenAAmount('');
       setTokenBAmount('');
+      fetchUserBalances();
     }
   }, [pool]);
+
+  // Fetch user balances when pool changes
+  const fetchUserBalances = async () => {
+    if (!pool || !selectedAccount) return;
+    
+    try {
+      setBalanceLoading(true);
+      const tokenABalance = await getUserBalance(selectedAccount.publicKey, pool.tokenAAddress);
+      const tokenBBalance = await getUserBalance(selectedAccount.publicKey, pool.tokenBAddress);
+      
+      setUserBalances({
+        tokenA: tokenABalance,
+        tokenB: tokenBBalance
+      });
+    } catch (error) {
+      console.error('Error fetching user balances:', error);
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
 
   // Calculate optimal token B amount when token A amount changes
   useEffect(() => {
@@ -76,7 +99,7 @@ export default function DepositModal({
 
   const handleDeposit = async () => {
     if (!pool || !selectedAccount) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert('Error', 'Please connect your wallet first');
       return;
     }
 
@@ -93,11 +116,24 @@ export default function DepositModal({
       return;
     }
 
+    // Validate user balances
+    if (amountA > userBalances.tokenA) {
+      Alert.alert('Insufficient Balance', `You only have ${userBalances.tokenA.toFixed(6)} ${pool.tokenASymbol}`);
+      return;
+    }
+
+    if (amountB > userBalances.tokenB) {
+      Alert.alert('Insufficient Balance', `You only have ${userBalances.tokenB.toFixed(6)} ${pool.tokenBSymbol}`);
+      return;
+    }
+
     try {
       setDepositLoading(true);
       const signature = await onDeposit(pool, amountA, amountB);
       Alert.alert('Success', `Liquidity added! Signature: ${signature}`);
       onClose();
+      // Refresh balances after successful deposit
+      fetchUserBalances();
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to add liquidity');
     } finally {
@@ -125,7 +161,13 @@ export default function DepositModal({
 
   const calculateEstimatedFees = () => {
     const poolShare = calculatePoolShare();
-    return (pool.totalFees24h * poolShare) / 100;
+    return ((pool?.totalFees24h || 0) * poolShare) / 100;
+  };
+
+  const getBalanceColor = (token: 'A' | 'B', amount: string) => {
+    const userAmount = token === 'A' ? userBalances.tokenA : userBalances.tokenB;
+    const inputAmount = parseFloat(amount) || 0;
+    return inputAmount > userAmount ? '#FF6B6B' : '#4CAF50';
   };
 
   if (!pool) return null;
@@ -158,11 +200,19 @@ export default function DepositModal({
                 <Text style={styles.poolInfo}>
                   Pool Value: ${formatNumber(pool.liquidity)}
                 </Text>
+                <Text style={styles.poolInfo}>
+                  Reserves: {formatNumber(pool.tokenAReserve)} {pool.tokenASymbol} / {formatNumber(pool.tokenBReserve)} {pool.tokenBSymbol}
+                </Text>
               </Card.Content>
             </Card>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Amount {pool.tokenASymbol}</Text>
+              <View style={styles.inputHeader}>
+                <Text style={styles.inputLabel}>Amount {pool.tokenASymbol}</Text>
+                <TouchableOpacity onPress={() => setTokenAAmount(userBalances.tokenA.toString())}>
+                  <Text style={styles.maxButton}>MAX</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.amountInput}
@@ -174,10 +224,18 @@ export default function DepositModal({
                 />
                 <Text style={styles.tokenSymbol}>{pool.tokenASymbol}</Text>
               </View>
+              <Text style={[styles.balanceText, { color: getBalanceColor('A', tokenAAmount) }]}>
+                Balance: {balanceLoading ? 'Loading...' : `${userBalances.tokenA.toFixed(6)} ${pool.tokenASymbol}`}
+              </Text>
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Amount {pool.tokenBSymbol}</Text>
+              <View style={styles.inputHeader}>
+                <Text style={styles.inputLabel}>Amount {pool.tokenBSymbol}</Text>
+                <TouchableOpacity onPress={() => setTokenBAmount(userBalances.tokenB.toString())}>
+                  <Text style={styles.maxButton}>MAX</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.amountInput}
@@ -189,6 +247,9 @@ export default function DepositModal({
                 />
                 <Text style={styles.tokenSymbol}>{pool.tokenBSymbol}</Text>
               </View>
+              <Text style={[styles.balanceText, { color: getBalanceColor('B', tokenBAmount) }]}>
+                Balance: {balanceLoading ? 'Loading...' : `${userBalances.tokenB.toFixed(6)} ${pool.tokenBSymbol}`}
+              </Text>
             </View>
 
             {tokenAAmount && tokenBAmount && (
@@ -219,10 +280,14 @@ export default function DepositModal({
             <TouchableOpacity
               style={[
                 styles.depositButton,
-                (!tokenAAmount || !tokenBAmount || depositLoading || loading) && styles.depositButtonDisabled
+                (!tokenAAmount || !tokenBAmount || depositLoading || loading || 
+                 parseFloat(tokenAAmount) > userBalances.tokenA || 
+                 parseFloat(tokenBAmount) > userBalances.tokenB) && styles.depositButtonDisabled
               ]}
               onPress={handleDeposit}
-              disabled={!tokenAAmount || !tokenBAmount || depositLoading || loading}
+              disabled={!tokenAAmount || !tokenBAmount || depositLoading || loading ||
+                       parseFloat(tokenAAmount) > userBalances.tokenA || 
+                       parseFloat(tokenBAmount) > userBalances.tokenB}
             >
               {depositLoading || loading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -303,11 +368,25 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 16,
   },
+  inputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   inputLabel: {
     fontSize: 16,
     fontFamily: FontFamilies.Geist.Regular,
     color: '#FFFFFF',
-    marginBottom: 8,
+  },
+  maxButton: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#DDB15B',
+    backgroundColor: 'rgba(221, 177, 91, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   inputRow: {
     flexDirection: 'row',
@@ -328,6 +407,12 @@ const styles = StyleSheet.create({
     fontFamily: FontFamilies.Geist.Bold,
     color: '#DDB15B',
     marginLeft: 8,
+  },
+  balanceText: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    marginTop: 4,
+    marginLeft: 4,
   },
   infoCard: {
     backgroundColor: 'transparent',
