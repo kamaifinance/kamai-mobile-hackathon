@@ -317,7 +317,7 @@ export function HomeScreen() {
         </ScrollView>
 
         {/* DAMM v1 Liquidity Pools Section */}
-        <Text style={styles.sectionTitle}>Liquidity Pools</Text>
+        <Text style={styles.sectionTitle}>Pools</Text>
           <ScrollView
             style={styles.investmentCards}
             horizontal={true}

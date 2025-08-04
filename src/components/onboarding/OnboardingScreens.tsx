@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     width: 650,
     height: 650,
     marginTop: 25,
-    marginRight:-50,
+    marginRight:-40,
   },
   phoneImage2: {
     width: 400,
