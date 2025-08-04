@@ -13,6 +13,7 @@ import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
 import { calculateFutureValue } from '../utils/vaultService';
 import { useGetBalance } from '../components/account/account-data-access';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import WithdrawModal from "../components/vault/WithdrawModal";
 
 // Generate realistic portfolio data for the past 30 days
 const generatePortfolioData = () => {
@@ -45,10 +46,11 @@ export function HomeScreen() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
   const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
-
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
   const { selectedAccount } = useAuthorization();
-  const { depositToVault } = useVaultService();
+  const { depositToVault, withdrawFromVault: withdrawFromVaultService } = useVaultService();
 
 
   
@@ -127,7 +129,29 @@ export function HomeScreen() {
     }
   };
 
-
+  const handleWithdraw = async (vault: VaultInfo) => {
+    if (!selectedAccount) {
+      setShowConnectWalletAlert(true);
+      return;
+    }
+    setSelectedVault(vault);
+    setShowWithdrawModal(true);
+  };
+  
+  const handleWithdrawConfirm = async (vault: VaultInfo, amount: number): Promise<string> => {
+    try {
+      setWithdrawing(vault.tokenSymbol);
+      console.log('Withdrawing from vault:', vault.tokenSymbol);
+      const signature = await withdrawFromVaultService(amount, vault.tokenSymbol);
+      await refreshUserBalances();
+      return signature; 
+    } catch (error) {
+      console.error('Error withdrawing:', error);
+      throw error;
+    } finally {
+      setWithdrawing(null);
+    }
+  };
 
 
 
@@ -269,40 +293,47 @@ export function HomeScreen() {
                       </View>
 
                       {/* Action Buttons */}
-                      <View style={styles.actionButtonsContainer}>
-                        {hasBalance && (
+                      {selectedAccount ? (
+                        <View style={styles.actionButtonsContainer}>
+                          {withdrawableAmount > 0 && (
+                            <TouchableOpacity
+                              style={[
+                                styles.actionButton, 
+                                styles.withdrawButton,
+                                (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
+                              ]}
+                              onPress={() => handleWithdraw(vault)}
+                              disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
+                            >
+                              {withdrawing === vault.tokenSymbol ? (
+                                <ActivityIndicator color="#FFFFFF" size="small" />
+                              ) : (
+                                <Text style={styles.withdrawButtonText}>Withdraw</Text>
+                              )}
+                            </TouchableOpacity>
+                          )}
+
                           <TouchableOpacity
                             style={[
                               styles.actionButton, 
-                              styles.withdrawButton,
+                              styles.depositButton,
                               (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
                             ]}
-                            onPress={() => handleWithdraw(vault)}
+                            onPress={() => handleDeposit(vault)}
                             disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
                           >
-                            {withdrawing === vault.tokenSymbol ? (
+                            {depositing === vault.tokenSymbol ? (
                               <ActivityIndicator color="#FFFFFF" size="small" />
                             ) : (
-                              <Text style={styles.withdrawButtonText}>Withdraw</Text>
+                              <Text style={styles.depositButtonText}>Deposit</Text>
                             )}
                           </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                          style={[
-                            styles.actionButton, 
-                            styles.depositButton,
-                            (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
-                          ]}
-                          disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
-                        >
-                          {depositing === vault.tokenSymbol ? (
-                            <ActivityIndicator color="#FFFFFF" size="small" />
-                          ) : (
-                            <Text style={styles.depositButtonText}>Deposit</Text>
-                          )}
-                        </TouchableOpacity>
-                      </View>
+                        </View>
+                      ) : (
+                        <View style={styles.connectWalletPrompt}>
+                          <Text style={styles.connectWalletText}>Connect wallet to interact</Text>
+                        </View>
+                      )}
                       
                       {/* DEVNET Chip */}
                       {/* <View style={styles.devnetChipContainer}>
@@ -330,6 +361,17 @@ export function HomeScreen() {
         }}
         onDeposit={handleDepositConfirm}
         loading={depositing !== null}
+      />
+
+      <WithdrawModal
+        visible={showWithdrawModal}
+        vault={selectedVault}
+        onClose={() => {
+          setShowWithdrawModal(false);
+          setSelectedVault(null);
+        }}
+        onWithdraw={handleWithdrawConfirm}
+        withdrawableAmount={selectedVault ? (userBalances[selectedVault.tokenSymbol]?.withdrawableAmount || 0) : 0}
       />
       <ConnectWalletAlert
         visible={showConnectWalletAlert}
@@ -1024,5 +1066,22 @@ const styles = StyleSheet.create({
   },
   disabledActionButton: {
     opacity: 0.5,
+  },
+  connectWalletPrompt: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  connectWalletText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });

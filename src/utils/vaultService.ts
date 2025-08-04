@@ -741,6 +741,7 @@ export const withdrawFromVault = async (
     
     const withdrawTx = await vault.withdraw(publicKey, withdrawalAmount);
     console.log('Withdraw transaction built successfully');
+
     
     return {
       transaction: withdrawTx,
