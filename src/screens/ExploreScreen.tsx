@@ -8,7 +8,7 @@ import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
 const protocolIcons = {
   lombard: require('../../assets/protocol-icons/lombard.png'),
   kamino: require('../../assets/protocol-icons/kamino.png'),
-  raydium: require('../../assets/protocol-icons/raydium.png'),
+  raydium: require('../../assets/protocol-icons/raydium.jpeg'),
   parcl: require('../../assets/protocol-icons/parcl.png'),
   metawealth: require('../../assets/protocol-icons/metawealth.png'),
   'lulo-lending': require('../../assets/protocol-icons/lulo-lending.png'),
@@ -22,6 +22,7 @@ const protocolIcons = {
   orogold: require('../../assets/protocol-icons/orogold.png'),
   defituna: require('../../assets/protocol-icons/defituna.png'),
   solayer: require('../../assets/protocol-icons/sollayer.jpg'),
+  perena: require('../../assets/protocol-icons/perena.png')
 } as const;
 
 // Platform data for the explore screen
@@ -44,10 +45,18 @@ const exploreData = {
       iconKey: 'satlayer' as keyof typeof protocolIcons,
     },
     {
-      id: 'solayer',
-      name: 'Solayer Labs',
-      url: 'https://x.com/solayer_labs',
+      id: 'solayer-restaking',
+      name: 'Solayer (sSOL)',
+      apy: '7%',
+      url: 'https://app.solayer.org/',
       iconKey: 'solayer' as keyof typeof protocolIcons,
+    },
+    {
+      id: 'inshallah',
+      name: 'Inshallah (iaSOL)',
+      apy: '15%',
+      url: 'https://inshallah.fi/borrow/superstake',
+      iconKey: 'solayer' as keyof typeof protocolIcons, // Using solayer icon as placeholder
     },
     {
       id: 'lombard',
@@ -57,6 +66,13 @@ const exploreData = {
     },
   ],
   stablecoins: [
+    {
+      id: 'solayer-stable',
+      name: 'Solayer (sUSD)',
+      apy: '4%',
+      url: 'https://app.solayer.org/',
+      iconKey: 'solayer' as keyof typeof protocolIcons,
+    },
     {
       id: 'huma',
       name: 'Huma Finance',
@@ -74,14 +90,14 @@ const exploreData = {
     {
       id: 'lulo',
       name: 'Lulo',
-      apy: '10%',
-      url: 'https://app.lulo.fi',
+      apy: '9.4%',
+      url: 'https://app.lulo.fi/insights?address=CEQenwAuKRfXGxzHoGzj76EF5LkmZw9FYLSYwhBL3hwT',
       iconKey: 'lulo-lending' as keyof typeof protocolIcons,
     },
     {
       id: 'kamino',
       name: 'Kamino Finance',
-      apy: '9%',
+      apy: '4%',
       url: 'https://app.kamino.finance/liquidity?filter=stables&sort=tvl',
       iconKey: 'kamino' as keyof typeof protocolIcons,
     },
@@ -90,7 +106,7 @@ const exploreData = {
       name: 'Perena',
       apy: '4%',
       url: 'https://app.perena.org/',
-      icon: '🔵', // Fallback to emoji (SVG not supported)
+      iconKey: 'perena' as keyof typeof protocolIcons,
     },
     {
       id: 'orca',
@@ -102,7 +118,8 @@ const exploreData = {
     {
       id: 'raydium',
       name: 'Raydium',
-      url: 'https://raydium.io/clmm/create-position/?pool_id=BZtgQEyS6eXUXicYPHecYQ7PybqodXQMvkjUbP4R8mUU',
+      apy: '3%',
+      url: 'https://raydium.io/liquidity-pools/?type=Stables&sort_by=liquidity',
       iconKey: 'raydium' as keyof typeof protocolIcons,
     },
   ],
@@ -113,6 +130,18 @@ const exploreData = {
       apy: '4%',
       url: 'https://app.stabble.org/liquidity-pools/?tag=all&verified=true&boosted=false&rewarded=false&deposits=false&search=zbtc',
       iconKey: 'stabble' as keyof typeof protocolIcons,
+    },
+    {
+      id: 'satlayer-btcfi',
+      name: 'Satlayer',
+      url: 'https://app.satlayer.xyz/vaults/restake',
+      iconKey: 'satlayer' as keyof typeof protocolIcons,
+    },
+    {
+      id: 'lombard-btcfi',
+      name: 'Lombard Finance',
+      url: 'https://www.lombard.finance/app/stake/',
+      iconKey: 'lombard' as keyof typeof protocolIcons,
     },
   ],
   rwas: [
@@ -140,24 +169,28 @@ const exploreData = {
     {
       id: 'lulo-lending',
       name: 'Lulo',
-      url: 'https://lulo.fi/',
+      apy: '9.4%',
+      url: 'https://app.lulo.fi/insights?address=CEQenwAuKRfXGxzHoGzj76EF5LkmZw9FYLSYwhBL3hwT',
       iconKey: 'lulo-lending' as keyof typeof protocolIcons,
     },
     {
       id: 'deficarrot',
       name: 'DeFi Carrot',
-      url: 'https://deficarrot.com/',
+      apy: '8%',
+      url: 'https://use.deficarrot.com/',
       iconKey: 'deficarrot' as keyof typeof protocolIcons,
     },
     {
       id: 'defituna',
       name: 'DeFi Tuna',
+      apy: '8%',
       url: 'https://defituna.com/lending',
       iconKey: 'defituna' as keyof typeof protocolIcons,
     },
     {
       id: 'kamino-lending',
       name: 'Kamino Finance',
+      apy: '4%',
       url: 'https://app.kamino.finance/lending',
       iconKey: 'kamino-lending' as keyof typeof protocolIcons,
     },
@@ -269,8 +302,11 @@ export function ExploreScreen() {
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Explore</Text>
-          <Text style={styles.headerSubtitle}>
-          Kamai’s Choice of Solana’s Highest DeFi Yields
+          <Text style={styles.headerSubtitle2}>
+            Kamai’s Choice of Solana’s Highest DeFi Yields
+          </Text>
+          <Text style={styles.headerSubtitle}>  
+            Soon, deposited capital into our Vaults will automatically rotate between the highest yielding sources on Solana every month.
           </Text>
         </View>
 
@@ -317,12 +353,19 @@ const styles = StyleSheet.create({
     color: '#DDB15B',
     marginBottom: 12,
   },
-  headerSubtitle: {
+  headerSubtitle2: {
     fontSize: 16,
     fontFamily: FontFamilies.Geist.Regular,
     color: '#8C8C8C',
     lineHeight: 22,
     opacity: 0.8,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontFamily: FontFamilies.Geist.Regular,
+    color: '#8C8C8C',
+    lineHeight: 22,
+    opacity: 0.6,
   },
   section: {
     marginBottom: 32,

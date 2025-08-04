@@ -2,7 +2,6 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
 import { Modal, Portal } from 'react-native-paper';
 import { Typography } from '../../styles/typography';
-import { useNavigation } from '@react-navigation/native';
 
 interface ConnectWalletAlertProps {
   visible: boolean;
@@ -17,12 +16,9 @@ export function ConnectWalletAlert({
   title = "Wallet Required",
   message = "Please connect your wallet first to continue."
 }: ConnectWalletAlertProps) {
-  const navigation = useNavigation();
 
   const handleOkayPress = () => {
     onDismiss();
-    // Navigate to Profile tab
-    navigation.navigate('Profile' as never);
   };
 
   return (

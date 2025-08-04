@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { useVaultService, VaultInfo, UserVaultBalance } from '../hooks/useVaultService';
 import { useAuthorization } from '../utils/useAuthorization';
 import { getVaultDetails } from '../utils/vaultService';
@@ -11,39 +11,47 @@ interface VaultContextType {
   error: string | null;
   refreshVaults: () => Promise<void>;
   refreshUserBalances: () => Promise<void>;
+  preloadVaults: () => Promise<void>;
+  isPreloaded: boolean;
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
 interface VaultProviderProps {
   children: ReactNode;
+  preloadOnMount?: boolean;
 }
 
-export function VaultProvider({ children }: VaultProviderProps) {
+export function VaultProvider({ children, preloadOnMount = true }: VaultProviderProps) {
   const [vaults, setVaults] = useState<VaultInfo[]>([]);
   const [userBalances, setUserBalances] = useState<{ [key: string]: UserVaultBalance }>({});
   const [vaultDetails, setVaultDetails] = useState<{ [key: string]: any }>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPreloaded, setIsPreloaded] = useState(false);
   
   const { selectedAccount } = useAuthorization();
   const { getVaults, getUserVaultBalance } = useVaultService();
 
-  // Load vaults on provider mount
+  // Load vaults on provider mount if preloadOnMount is true
   useEffect(() => {
-    loadVaults();
-  }, []);
+    if (preloadOnMount) {
+      loadVaults();
+    }
+  }, [preloadOnMount]);
 
   // Load user balances when account changes
   useEffect(() => {
-    if (selectedAccount) {
+    if (selectedAccount && vaults.length > 0) {
       loadUserBalances();
     } else {
       setUserBalances({});
     }
   }, [selectedAccount, vaults]); // Also depend on vaults to ensure they're loaded first
 
-  const loadVaults = async () => {
+  const loadVaults = useCallback(async () => {
+    if (isPreloaded) return; // Prevent multiple loads
+    
     try {
       setLoading(true);
       setError(null);
@@ -71,6 +79,7 @@ export function VaultProvider({ children }: VaultProviderProps) {
         }
       }
       setVaultDetails(detailsObj);
+      setIsPreloaded(true);
       
     } catch (error) {
       console.error('Error loading vaults:', error);
@@ -78,9 +87,15 @@ export function VaultProvider({ children }: VaultProviderProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getVaults, isPreloaded]);
 
-  const loadUserBalances = async () => {
+  const preloadVaults = useCallback(async () => {
+    if (!isPreloaded) {
+      await loadVaults();
+    }
+  }, [isPreloaded, loadVaults]);
+
+  const loadUserBalances = useCallback(async () => {
     if (!selectedAccount || vaults.length === 0) return;
     
     try {
@@ -107,15 +122,16 @@ export function VaultProvider({ children }: VaultProviderProps) {
     } catch (error) {
       console.error('Error loading user balances:', error);
     }
-  };
+  }, [selectedAccount, vaults, getUserVaultBalance]);
 
-  const refreshVaults = async () => {
+  const refreshVaults = useCallback(async () => {
+    setIsPreloaded(false);
     await loadVaults();
-  };
+  }, [loadVaults]);
 
-  const refreshUserBalances = async () => {
+  const refreshUserBalances = useCallback(async () => {
     await loadUserBalances();
-  };
+  }, [loadUserBalances]);
 
   const value: VaultContextType = {
     vaults,
@@ -125,6 +141,8 @@ export function VaultProvider({ children }: VaultProviderProps) {
     error,
     refreshVaults,
     refreshUserBalances,
+    preloadVaults,
+    isPreloaded,
   };
 
   return (

@@ -139,15 +139,23 @@ export default function App() {
   // Show onboarding if user hasn't completed it
   if (showOnboarding) {
     return (
-      <ImageBackground
-        source={require('./assets/kamai_mobile_bg.png')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-        onLayout={onLayoutRootView}
-      >
-        <StatusBar style="light" />
-        <OnboardingScreens onComplete={handleOnboardingComplete} />
-      </ImageBackground>
+      <QueryClientProvider client={queryClient}>
+        <ClusterProvider>
+          <ConnectionProvider config={{ commitment: "processed" }}>
+            <VaultProvider preloadOnMount={false}>
+              <ImageBackground
+                source={require('./assets/kamai_mobile_bg.png')}
+                style={styles.backgroundImage}
+                resizeMode="cover"
+                onLayout={onLayoutRootView}
+              >
+                <StatusBar style="light" />
+                <OnboardingScreens onComplete={handleOnboardingComplete} />
+              </ImageBackground>
+            </VaultProvider>
+          </ConnectionProvider>
+        </ClusterProvider>
+      </QueryClientProvider>
     );
   }
 

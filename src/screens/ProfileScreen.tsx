@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Text } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Text, Alert, ActivityIndicator } from 'react-native';
 import { Card, Button } from 'react-native-paper';
 import MaterialCommunityIcon from "@expo/vector-icons/MaterialCommunityIcons";
+import * as ImagePicker from 'expo-image-picker';
 import { FontFamilies } from '../styles/fonts';
 import { useAuthorization } from '../utils/useAuthorization';
 import { useMobileWallet } from '../utils/useMobileWallet';
-import { userService, User } from '../../lib/supabase';
+import { userService, storageService, User } from '../../lib/supabase';
 import { PersonalInformationForm } from '../components/profile/PersonalInformationForm';
 import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
 
@@ -14,6 +15,7 @@ export function ProfileScreen() {
   const [userData, setUserData] = useState<User | null>(null);
   const [connectingWallet, setConnectingWallet] = useState(false);
   const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const { selectedAccount } = useAuthorization();
   const { connect, disconnect } = useMobileWallet();
 
@@ -79,6 +81,112 @@ export function ProfileScreen() {
     }
   };
 
+  const pickImage = async () => {
+    if (!selectedAccount) {
+      setShowConnectWalletAlert(true);
+      return;
+    }
+
+    // Request permission
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Permission to access camera roll is required!');
+      return;
+    }
+
+    // Launch image picker with base64
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1], // Square aspect ratio
+      quality: 0.8,
+      base64: true, // Add base64 data
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      await uploadProfileImage(result.assets[0].base64);
+    }
+  };
+
+  const takePhoto = async () => {
+    if (!selectedAccount) {
+      setShowConnectWalletAlert(true);
+      return;
+    }
+
+    // Request permission
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Permission to access camera is required!');
+      return;
+    }
+
+    // Launch camera with base64
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1], // Square aspect ratio
+      quality: 0.8,
+      base64: true, // Add base64 data
+    });
+
+    if (!result.canceled && result.assets[0].base64) {
+      await uploadProfileImage(result.assets[0].base64);
+    }
+  };
+
+  const showImagePicker = () => {
+    if (!selectedAccount) {
+      setShowConnectWalletAlert(true);
+      return;
+    }
+
+    Alert.alert(
+      'Select Image',
+      'Choose how you want to select your profile image',
+      [
+        { text: 'Camera', onPress: takePhoto },
+        { text: 'Photo Library', onPress: pickImage },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const uploadProfileImage = async (base64Data: string) => {
+    if (!selectedAccount) return;
+
+    try {
+      setUploadingImage(true);
+      
+      const profileImageUrl = await storageService.uploadProfileImage(
+        base64Data,
+        selectedAccount.publicKey.toBase58(),
+        'image/jpeg'
+      );
+
+      // Update user data with new profile image
+      const updatedUserData: Omit<User, 'id' | 'created_at' | 'updated_at'> = {
+        name: userData?.name || '',
+        email: userData?.email || undefined,
+        wallet: selectedAccount.publicKey.toBase58(),
+        profile_image: profileImageUrl,
+      };
+
+      await userService.upsertUser(updatedUserData);
+      
+      // Reload user data to show updated image
+      await loadUserData();
+      
+      Alert.alert('Success!', 'Profile image updated successfully.');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const getUserDisplayName = () => {
     // If user has a name in database, show it, otherwise show "Connected User"
     if (userData?.name) return userData.name;
@@ -86,9 +194,15 @@ export function ProfileScreen() {
   };
 
   const getUserEmail = () => {
-    // Email should show the wallet address (public key)
+    // Show the truncated connected wallet address (public key)
     if (selectedAccount) {
-      return userData?.email || 'Connect your wallet';
+      const address = typeof selectedAccount === 'string'
+        ? selectedAccount
+        : selectedAccount?.publicKey?.toString?.() || '';
+      if (address && address.length > 8) {
+        return `${address.slice(0, 4)}...${address.slice(-4)}`;
+      }
+      return address || 'Wallet Connected';
     }
     return '';
   };
@@ -105,8 +219,16 @@ export function ProfileScreen() {
             <Card.Content style={styles.profileContent}>
               {/* Profile Avatar */}
               <View style={styles.avatarContainer}>
-                <View style={styles.avatar}>
-                  {userData?.profile_image ? (
+                <TouchableOpacity 
+                  style={styles.avatar} 
+                  onPress={showImagePicker}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <View style={styles.uploadingContainer}>
+                      <ActivityIndicator size="small" color="#DDB15B" />
+                    </View>
+                  ) : userData?.profile_image ? (
                     <Image 
                       source={{ uri: userData.profile_image }} 
                       style={styles.avatarImage}
@@ -117,7 +239,7 @@ export function ProfileScreen() {
                       style={styles.avatarImage}
                     />
                   )}
-                </View>
+                </TouchableOpacity>
               </View>
               
               {/* User Info */}
@@ -141,32 +263,6 @@ export function ProfileScreen() {
               )}
             </Card.Content>
           </Card>
-
-          {/* Stats Cards
-          <View style={styles.statsContainer}>
-            <View style={styles.statsRow}>
-              <Card style={styles.statCard}>
-                <Card.Content style={styles.statContent}>
-                  <Text style={styles.statNumber}>24</Text>
-                  <Text style={styles.statLabel}>Total Return</Text>
-                </Card.Content>
-              </Card>
-              
-              <Card style={styles.statCard}>
-                <Card.Content style={styles.statContent}>
-                  <Text style={styles.statNumber}>8</Text>
-                  <Text style={styles.statLabel}>Total Return</Text>
-                </Card.Content>
-              </Card>
-              
-              <Card style={styles.statCard}>
-                <Card.Content style={styles.statContent}>
-                  <Text style={styles.statNumber}>156</Text>
-                  <Text style={styles.statLabel}>Total Return</Text>
-                </Card.Content>
-              </Card>
-            </View>
-          </View> */}
 
           {/* Account Section */}
           <Text style={styles.sectionTitle}>Account</Text>
@@ -435,5 +531,13 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#FF6B6B',
+  },
+  uploadingContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 40,
   },
 }); 

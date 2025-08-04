@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { FontFamilies } from '../../styles/fonts';
+import { useVaultContext } from '../../context/VaultProvider';
 
 interface OnboardingScreensProps {
   onComplete: () => void;
@@ -40,6 +41,28 @@ const onboardingData = [
 export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const hasPreloadedRef = useRef(false);
+  const { preloadVaults } = useVaultContext();
+
+  // Start preloading vaults when component mounts (only once)
+  useEffect(() => {
+    if (!hasPreloadedRef.current) {
+      hasPreloadedRef.current = true;
+      
+      const startPreloading = async () => {
+        try {
+          console.log('Starting vault preloading during onboarding...');
+          await preloadVaults();
+          console.log('Vault preloading completed during onboarding');
+        } catch (error) {
+          console.warn('Failed to preload vaults during onboarding:', error);
+          // Don't block onboarding if vault preloading fails
+        }
+      };
+
+      startPreloading();
+    }
+  }, []); // Empty dependency array to run only once
 
   const handleScroll = (event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -75,7 +98,7 @@ export function OnboardingScreens({ onComplete }: OnboardingScreensProps) {
   const renderTokensVisual = () => (
     <View style={styles.phoneContainer}>
       <Image 
-        source={require('../../../assets/onboarding_screen_2.png')}
+        source={require('../../../assets/better_second_screen.png')}
         style={styles.phoneImage2}
         resizeMode="contain"
       />
@@ -359,8 +382,8 @@ const styles = StyleSheet.create({
     marginRight:-50,
   },
   phoneImage2: {
-    width: 550,
-    height: 550,
+    width: 400,
+    height: 600,
   },
   phoneImage3: {
     width: 400,
