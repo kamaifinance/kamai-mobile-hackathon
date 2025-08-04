@@ -33,6 +33,10 @@ export default function DepositModal({
   onDeposit,
   loading = false,
 }: DepositModalProps) {
+  // Don't render modal if vault is null
+  if (!vault) {
+    return null;
+  }
   const [amount, setAmount] = useState('');
   const [depositing, setDepositing] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
@@ -41,12 +45,13 @@ export default function DepositModal({
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
     if (symbol === 'SOL') return 'LSTs';
+    if (symbol === 'USDC') return 'Stables';
     return symbol;
   };
 
   const getVaultCardStyle = (symbol: string) => {
     const vaultType = getVaultType(symbol);
-    if (vaultType === 'Protected') return styles.protectedCard;
+    if (vaultType === 'Stables') return styles.protectedCard;
     if (vaultType === 'Boosted') return styles.boostedCard;
     return styles.premiumCard;
   };
@@ -63,8 +68,8 @@ export default function DepositModal({
     try {
       setDepositing(true);
       const signature = await onDeposit(vault, numAmount);
-      
-      setSuccessMessage(`Successfully deposited ${amount} ${vault.tokenSymbol} to ${getVaultType(vault.tokenSymbol)} vault.`);
+
+      setSuccessMessage(`Successfully deposited ${amount} ${vault?.tokenSymbol || 'tokens'} to ${getVaultType(vault?.tokenSymbol || '')} vault.`);
       setAmount('');
       onClose();
       setShowSuccessAlert(true);
@@ -85,126 +90,130 @@ export default function DepositModal({
 
   return (
     <>
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleClose}
-    >
-      <View style={styles.overlay}>
-        <TouchableOpacity style={styles.backdrop} onPress={handleClose} activeOpacity={1} />
-        <View style={styles.bottomSheet}>
-          <ImageBackground
-            source={require('../../../assets/kamai_mobile_bg.png')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          >
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
-              {/* Handle Bar */}
-              <View style={styles.handleBar} />
-              
-              {/* Title */}
-              <Text style={styles.title}>Deposit to {getVaultType(vault?.tokenSymbol || '')} Vault</Text>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleClose}
+      >
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.backdrop} onPress={handleClose} activeOpacity={1} />
+          <View style={styles.bottomSheet}>
+            <ImageBackground
+              source={require('../../../assets/kamai_mobile_bg.png')}
+              style={styles.backgroundImage}
+              resizeMode="cover"
+            >
+              <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+                {/* Handle Bar */}
+                <View style={styles.handleBar} />
 
-              {/* Vault Information Card */}
-              {vault && (
-                <View style={[styles.vaultInfoCard, getVaultCardStyle(vault.tokenSymbol)]}>
-                  <ImageBackground
-                    source={require('../../../assets/vault_boosted.png')}
-                    style={styles.vaultCardBackground}
-                    resizeMode="cover"
-                  >
-                    <View style={styles.vaultCardContent}>
-                      <View style={styles.vaultHeader}>
-                        <Text style={styles.vaultName}>{getVaultType(vault.tokenSymbol)}</Text>
-                        <View style={styles.vaultBadge}>
-                          <Text style={styles.vaultSymbol}>DEVNET</Text>
-                        </View>
-                      </View>
-                      {vault.apy && (
-                        <View style={styles.apyContainer}>
-                          <View style={styles.apyCardBadge}>
-                            <Text style={styles.apyCardValue}>{vault.apy.toFixed(2)}%</Text>
+                {/* Title */}
+                <Text style={styles.title}>
+                  Deposit to {String(getVaultType(vault?.tokenSymbol || ''))} Vault
+                </Text> 
+
+                {/* Vault Information Card */}
+                {vault && (
+                  <View style={[styles.vaultInfoCard, getVaultCardStyle(vault.tokenSymbol)]}>
+                    <ImageBackground
+                      source={getVaultType(vault.tokenSymbol) === 'Stables'
+                        ? require('../../../assets/vault_normal.png')
+                        : require('../../../assets/vault_boosted.png')}
+                      style={styles.vaultCardBackground}
+                      resizeMode="cover"
+                    >
+                      <View style={styles.vaultCardContent}>
+                        <View style={styles.vaultHeader}>
+                          <Text style={styles.vaultName}>{getVaultType(vault?.tokenSymbol || '')}</Text>
+                          <View style={styles.vaultBadge}>
+                            <Text style={styles.vaultSymbol}>DEVNET</Text>
                           </View>
-                          <Text style={styles.apyCardLabel}>APY (30 days avg.)</Text>
                         </View>
-                      )}
-                    </View>
-                  </ImageBackground>
-                </View>
-              )}
-
-              {/* Amount Input Section */}
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>Amount to deposit</Text>
-                <View style={styles.inputCard}>
-                  <ImageBackground
-                    source={require('../../../assets/vault_normal.png')}
-                    style={styles.inputCardBackground}
-                    resizeMode="cover"
-                  >
-                    <View style={styles.inputCardContent}>
-                      <View style={styles.inputWrapper}>
-                        <TextInput
-                          style={styles.amountInput}
-                          value={amount}
-                          onChangeText={setAmount}
-                          placeholder="0"
-                          placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                          keyboardType="numeric"
-                          editable={!depositing}
-                        />
-                        {vault && (
-                          <View style={styles.tokenBadge}>
-                            <Text style={styles.tokenText}>{vault.tokenSymbol}</Text>
+                        {vault?.apy !== undefined && vault?.apy !== null && (
+                          <View style={styles.apyContainer}>
+                            <View style={styles.apyCardBadge}>
+                              <Text style={styles.apyCardValue}>{vault.apy.toFixed(2)}%</Text>
+                            </View>
+                            <Text style={styles.apyCardLabel}>APY (30 days avg.)</Text>
                           </View>
                         )}
                       </View>
-                    </View>
-                  </ImageBackground>
+                    </ImageBackground>
+                  </View>
+                )}
+
+                {/* Amount Input Section */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>Amount to deposit</Text>
+                  <View style={styles.inputCard}>
+                    <ImageBackground
+                      source={require('../../../assets/vault_normal.png')}
+                      style={styles.inputCardBackground}
+                      resizeMode="cover"
+                    >
+                      <View style={styles.inputCardContent}>
+                        <View style={styles.inputWrapper}>
+                          <TextInput
+                            style={styles.amountInput}
+                            value={amount}
+                            onChangeText={setAmount}
+                            placeholder="0"
+                            placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                            keyboardType="numeric"
+                            editable={!depositing}
+                          />
+                          {vault && (
+                            <View style={styles.tokenBadge}>
+                              <Text style={styles.tokenText}>{vault.tokenSymbol}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </ImageBackground>
+                  </View>
                 </View>
-              </View>
 
-              {/* Action Buttons */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={[styles.cancelButton, depositing && styles.disabledButton]}
-                  onPress={handleClose}
-                  disabled={depositing}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.depositButton,
-                    (!amount || depositing) && styles.depositButtonDisabled,
-                  ]}
-                  onPress={handleDeposit}
-                  disabled={!amount || depositing}
-                >
-                  {depositing ? (
-                    <ActivityIndicator size="small" color="#1B3A32" />
-                  ) : (
-                    <Text style={styles.depositButtonText}>Deposit</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </ImageBackground>
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={[styles.cancelButton, depositing && styles.disabledButton]}
+                    onPress={handleClose}
+                    disabled={depositing}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.depositButton,
+                      (!amount || depositing) && styles.depositButtonDisabled,
+                    ]}
+                    onPress={handleDeposit}
+                    disabled={!amount || depositing}
+                  >
+                    {depositing ? (
+                      <ActivityIndicator size="small" color="#1B3A32" />
+                    ) : (
+                      <Text style={styles.depositButtonText}>Deposit</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </ImageBackground>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
-    <SuccessAlert
-      visible={showSuccessAlert}
-      message={successMessage}
-      onDismiss={() => {
-        setShowSuccessAlert(false);
-      }}
+      <SuccessAlert
+        visible={showSuccessAlert}
+        message={successMessage}
+        onDismiss={() => {
+          setShowSuccessAlert(false);
+        }}
       />
     </>
-    );
+  );
 }
 
 const styles = StyleSheet.create({

@@ -33,6 +33,11 @@ export default function WithdrawModal({
   onWithdraw,
   withdrawableAmount,
 }: WithdrawModalProps) {
+  // Don't render modal if vault is null
+  if (!vault) {
+    return null;
+  }
+  
   const [amount, setAmount] = useState('');
   const [withdrawing, setWithdrawing] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
@@ -40,12 +45,13 @@ export default function WithdrawModal({
 
   const getVaultType = (symbol: string) => {
     if (symbol === 'SOL') return 'LSTs';
+    if (symbol === 'USDC') return 'Stables';
     return symbol;
   };
 
   const getVaultCardStyle = (symbol: string) => {
     const vaultType = getVaultType(symbol);
-    if (vaultType === 'Protected') return styles.protectedCard;
+    if (vaultType === 'Stables') return styles.protectedCard;
     if (vaultType === 'Boosted') return styles.boostedCard;
     return styles.premiumCard;
   };
@@ -72,7 +78,7 @@ export default function WithdrawModal({
     try {
       setWithdrawing(true);
       const signature = await onWithdraw(vault, numAmount);
-      setSuccessMessage(`Successfully withdrew ${amount} ${vault.tokenSymbol} from ${getVaultType(vault.tokenSymbol)} vault.`);
+      setSuccessMessage(`Successfully withdrew ${amount} ${vault?.tokenSymbol || 'tokens'} from ${getVaultType(vault?.tokenSymbol || '')} vault.`);
       setAmount('');
       onClose();
       setShowSuccessAlert(true);
@@ -114,18 +120,20 @@ export default function WithdrawModal({
                 {vault && (
                   <View style={[styles.vaultInfoCard, getVaultCardStyle(vault.tokenSymbol)]}>
                     <ImageBackground
-                      source={require('../../../assets/vault_boosted.png')}
+                      source={getVaultType(vault.tokenSymbol) === 'Stables' 
+                        ? require('../../../assets/vault_normal.png') 
+                        : require('../../../assets/vault_boosted.png')}
                       style={styles.vaultCardBackground}
                       resizeMode="cover"
                     >
                       <View style={styles.vaultCardContent}>
                         <View style={styles.vaultHeader}>
-                          <Text style={styles.vaultName}>{getVaultType(vault.tokenSymbol)}</Text>
+                          <Text style={styles.vaultName}>{getVaultType(vault?.tokenSymbol || '')}</Text>
                           <View style={styles.vaultBadge}>
                             <Text style={styles.vaultSymbol}>DEVNET</Text>
                           </View>
                         </View>
-                        {vault.apy && (
+                        {vault?.apy !== undefined && vault?.apy !== null && (
                           <View style={styles.apyContainer}>
                             <View style={styles.apyCardBadge}>
                               <Text style={styles.apyCardValue}>{vault.apy.toFixed(2)}%</Text>

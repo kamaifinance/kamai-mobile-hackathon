@@ -88,12 +88,13 @@ export function HomeScreen() {
   // Helper to map vault type
   const getVaultType = (symbol: string) => {
     if (symbol === 'SOL') return 'LSTs';
+    if (symbol === 'USDC') return 'Stables';
     return symbol;
   };
 
   const getVaultIcon = (type: string, index: number) => {
     if (type === 'Boosted' || index === 0) return require('../../assets/star.png');
-    if (type === 'Protected') return require('../../assets/shield.png');
+    if (type === 'Stables') return require('../../assets/shield.png');
     return require('../../assets/vault.png');
   };
 
@@ -152,36 +153,6 @@ export function HomeScreen() {
       setWithdrawing(null);
     }
   };
-
-
-
-  const SimpleChart = () => (
-    <View style={styles.chartContainer}>
-      <LineChart
-        data={portfolioData}
-        height={140}
-        width={350}
-        spacing={8}
-        color="#CD9227"
-        thickness={2}
-        startFillColor="#CD9227"
-        endFillColor="#CD9227"
-        startOpacity={0.3}
-        endOpacity={0.1}
-        initialSpacing={0}
-        noOfSections={4}
-        animateOnDataChange
-        animationDuration={1000}
-        onDataChangeAnimationDuration={300}
-        areaChart
-        hideDataPoints
-        hideRules
-        hideYAxisText
-        hideAxesAndRules
-        curved
-      />
-    </View>
-  );
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -256,6 +227,9 @@ export function HomeScreen() {
             const withdrawableAmount = userBalance?.withdrawableAmount || 0;
             const solPrice = (vault as any).solPrice || 100;
             const usdValue = withdrawableAmount * solPrice;
+
+            if(!vault) return null;
+
             
             return (
               <View key={vault.tokenSymbol}>
@@ -264,7 +238,9 @@ export function HomeScreen() {
                   styles.boostedCard
                 ]}>
                   <ImageBackground
-                    source={require('../../assets/vault_boosted.png')}
+                    source={vaultType === 'Stables' 
+                      ? require('../../assets/vault_normal.png') 
+                      : require('../../assets/vault_boosted.png')}
                     style={styles.cardBackgroundImage}
                     resizeMode="cover"
                   >
@@ -279,7 +255,7 @@ export function HomeScreen() {
                       </View>
                       <View style={styles.amountContainer}>
                         <Text style={styles.solAmount}>
-                          {withdrawableAmount.toFixed(4)} SOL
+                          {withdrawableAmount.toFixed(4)} {vault.tokenSymbol}
                         </Text>
                         <Text style={styles.usdValue}>
                           ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -287,7 +263,7 @@ export function HomeScreen() {
                       </View>
                       <View style={styles.cardBottomRow}>
                         <View style={styles.apyCardBadge}>
-                          <Text style={styles.apyCardValue}>{vault.apy}%</Text>
+                          <Text style={styles.apyCardValue}>{vault.apy || 0}%</Text>
                         </View>
                         <Text style={styles.apyCardLabel}>APY</Text>
                       </View>
@@ -313,21 +289,29 @@ export function HomeScreen() {
                             </TouchableOpacity>
                           )}
 
-                          <TouchableOpacity
-                            style={[
-                              styles.actionButton, 
-                              styles.depositButton,
-                              (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
-                            ]}
-                            onPress={() => handleDeposit(vault)}
-                            disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
-                          >
-                            {depositing === vault.tokenSymbol ? (
-                              <ActivityIndicator color="#FFFFFF" size="small" />
-                            ) : (
-                              <Text style={styles.depositButtonText}>Deposit</Text>
-                            )}
-                          </TouchableOpacity>
+                          {/* Deposit Button - Only for LSTs */}
+                          {vaultType === 'LSTs' ? (
+                            <TouchableOpacity
+                              style={[
+                                styles.actionButton, 
+                                styles.depositButton,
+                                (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
+                              ]}
+                              onPress={() => handleDeposit(vault)}
+                              disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
+                            >
+                              {depositing === vault.tokenSymbol ? (
+                                <ActivityIndicator color="#FFFFFF" size="small" />
+                              ) : (
+                                <Text style={styles.depositButtonText}>Deposit</Text>
+                              )}
+                            </TouchableOpacity>
+                          ) : (
+                            /* Coming Soon for Stables */
+                            <View style={[styles.actionButton, styles.comingSoonButton]}>
+                              <Text style={styles.comingSoonButtonText}>Coming Soon</Text>
+                            </View>
+                          )}
                         </View>
                       ) : (
                         <View style={styles.connectWalletPrompt}>
@@ -357,7 +341,8 @@ export function HomeScreen() {
         vault={selectedVault}
         onClose={() => {
           setShowDepositModal(false);
-          setSelectedVault(null);
+          // Delay clearing selectedVault to prevent rendering errors during modal close
+          setTimeout(() => setSelectedVault(null), 100);
         }}
         onDeposit={handleDepositConfirm}
         loading={depositing !== null}
@@ -368,7 +353,8 @@ export function HomeScreen() {
         vault={selectedVault}
         onClose={() => {
           setShowWithdrawModal(false);
-          setSelectedVault(null);
+          // Delay clearing selectedVault to prevent rendering errors during modal close
+          setTimeout(() => setSelectedVault(null), 100);
         }}
         onWithdraw={handleWithdrawConfirm}
         withdrawableAmount={selectedVault ? (userBalances[selectedVault.tokenSymbol]?.withdrawableAmount || 0) : 0}
@@ -1049,23 +1035,39 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   depositButton: {
-    backgroundColor: '#4CAF50', // Green
+    backgroundColor: '#DDB15B', // Theme golden color
+    borderWidth: 1,
+    borderColor: 'rgba(221, 177, 91, 0.3)',
   },
   withdrawButton: {
-    backgroundColor: '#F44336', // Red
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Dark theme background
+    borderWidth: 1,
+    borderColor: '#2B3834', // Theme border color
   },
   depositButtonText: {
     fontSize: 14,
     fontFamily: FontFamilies.Geist.Bold,
-    color: '#FFFFFF',
+    color: '#1B3A32', // Dark text on golden background
   },
   withdrawButtonText: {
     fontSize: 14,
     fontFamily: FontFamilies.Geist.Bold,
-    color: '#FFFFFF',
+    color: '#DDB15B', // Golden text on dark background
   },
   disabledActionButton: {
     opacity: 0.5,
+  },
+  comingSoonButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Match theme dark backgrounds
+    borderWidth: 1,
+    borderColor: '#2B3834',
+    opacity: 0.7,
+  },
+  comingSoonButtonText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+    opacity: 0.6,
   },
   connectWalletPrompt: {
     marginTop: 16,

@@ -57,8 +57,10 @@ export function VaultProvider({ children, preloadOnMount = true }: VaultProvider
       setError(null);
       
       const availableVaults = await getVaults();
-      // Only keep SOL vault
-      const filteredVaults = availableVaults.filter((v: any) => v.tokenSymbol === 'SOL') as VaultInfo[];
+      // Keep SOL and USDC vaults
+      const filteredVaults = availableVaults.filter((v: any) => 
+        v.tokenSymbol === 'SOL' || v.tokenSymbol === 'USDC'
+      ) as VaultInfo[];
       
       setVaults(filteredVaults);
       
