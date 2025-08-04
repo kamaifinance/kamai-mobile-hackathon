@@ -25,7 +25,7 @@ import { AppNavigator } from "./src/navigators/AppNavigator";
 import { ClusterProvider } from "./src/components/cluster/cluster-data-access";
 import { OnboardingScreens } from "./src/components/onboarding";
 import { VaultProvider } from "./src/context";
-import { DammProvider } from "./src/context/DammProvider";
+
 
 const queryClient = new QueryClient();
 
@@ -144,7 +144,6 @@ export default function App() {
         <ClusterProvider>
           <ConnectionProvider config={{ commitment: "processed" }}>
             <VaultProvider preloadOnMount={false}>
-              <DammProvider preloadOnMount={false}>
                 <ImageBackground
                   source={require('./assets/kamai_mobile_bg.png')}
                   style={styles.backgroundImage}
@@ -154,7 +153,6 @@ export default function App() {
                   <StatusBar style="light" />
                   <OnboardingScreens onComplete={handleOnboardingComplete} />
                 </ImageBackground>
-              </DammProvider>
             </VaultProvider>
           </ConnectionProvider>
         </ClusterProvider>
@@ -168,7 +166,6 @@ export default function App() {
               <ClusterProvider>
           <ConnectionProvider config={{ commitment: "processed" }}>
             <VaultProvider>
-              <DammProvider>
                 <ImageBackground
                   source={require('./assets/kamai_mobile_bg.png')}
                   style={styles.backgroundImage}
@@ -194,7 +191,6 @@ export default function App() {
                     </PaperProvider>
                   </SafeAreaView>
                 </ImageBackground>
-              </DammProvider>
             </VaultProvider>
           </ConnectionProvider>
         </ClusterProvider>

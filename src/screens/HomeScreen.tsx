@@ -9,9 +9,7 @@ import { useAuthorization } from '../utils/useAuthorization';
 
 import DepositModal from '../components/vault/DepositModal';
 import { ConnectWalletAlert } from '../components/ui/ConnectWalletAlert';
-import { useDammContext } from '../context/DammProvider';
-import LiquidityDepositModal from '../components/swap/DepositModal';
-import { DammPool } from '../utils/dammService';
+
 import { calculateFutureValue } from '../utils/vaultService';
 import { useGetBalance } from '../components/account/account-data-access';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -47,14 +45,11 @@ export function HomeScreen() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultInfo | null>(null);
   const [showConnectWalletAlert, setShowConnectWalletAlert] = useState(false);
-  const [showLiquidityModal, setShowLiquidityModal] = useState(false);
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [selectedPool, setSelectedPool] = useState<DammPool | null>(null);
-  const [depositingLiquidity, setDepositingLiquidity] = useState(false);
+
   const { vaults, userBalances, vaultDetails, loading, refreshUserBalances } = useVaultContext();
   const { selectedAccount } = useAuthorization();
   const { depositToVault } = useVaultService();
-  const { pools: dammPools, stats: dammStats, provideLiquidity, getQuote } = useDammContext();
+
 
   
   // Get SOL balance
@@ -132,32 +127,7 @@ export function HomeScreen() {
     }
   };
 
-  const handleLiquidityDeposit = async (pool: DammPool, tokenAAmount: number, tokenBAmount: number): Promise<string> => {
-    if (!selectedAccount) {
-      throw new Error('Wallet not connected');
-    }
-    
-    try {
-      setDepositingLiquidity(true);
-      console.log('Adding liquidity:', tokenAAmount, tokenBAmount);
-      const result = await provideLiquidity(selectedAccount.publicKey, pool.id, tokenAAmount, tokenBAmount);
-      return result.transaction.signatures[0] || 'Transaction completed';
-    } catch (error) {
-      console.error('Error adding liquidity:', error);
-      throw error;
-    } finally {
-      setDepositingLiquidity(false);
-    }
-  };
 
-  const handleLiquidityPress = (pool: DammPool) => {
-    if (!selectedAccount) {
-      setShowConnectWalletAlert(true);
-      return;
-    }
-    setSelectedPool(pool);
-    setShowLiquidityModal(true);
-  };
 
 
 
@@ -316,87 +286,7 @@ export function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* DAMM v1 Liquidity Pools Section */}
-        <Text style={styles.sectionTitle}>Pools</Text>
-        
-        {/* Pool Statistics Card */}
-        {/* <Card style={styles.statsCard}>
-          <Card.Content style={styles.statsCardContent}>
-            <Text style={styles.statsCardTitle}>Pool Statistics</Text>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  ${dammStats.totalLiquidity.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={styles.statLabel}>Total Liquidity</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  ${dammStats.totalVolume24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={styles.statLabel}>24h Volume</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  ${dammStats.totalFees24h.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={styles.statLabel}>24h Fees</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>
-                  {dammStats.activePools}
-                </Text>
-                <Text style={styles.statLabel}>Active Pools</Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card> */}
-        
-        <ScrollView
-          style={styles.investmentCards}
-          horizontal={true}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.investmentCardsContainer}
-        >
-            {dammPools.map((pool: DammPool) => (
-              <TouchableOpacity
-                key={pool.id}
-                onPress={() => handleLiquidityPress(pool)}
-              >
-                <Card style={styles.swapCard}>
-                  <Card.Content style={styles.swapCardContent}>
-                    <View style={styles.swapHeader}>
-                      <Text style={styles.swapPair}>
-                        {pool.tokenASymbol}/{pool.tokenBSymbol}
-                      </Text>
-                      <View style={styles.swapBadge}>
-                        <Text style={styles.swapBadgeText}>DEVNET</Text>
-                      </View>
-                    </View>
-                    {/* <Text style={styles.swapVolume}>
-                      ${pool.liquidity.toLocaleString()} Liquidity
-                    </Text> */}
-                    <View style={styles.swapStats}>
-                      <View style={styles.swapStat}>
-                        <Text style={styles.swapStatLabel}>Volume</Text>
-                        <Text style={styles.swapStatValue}>${pool.volume24h.toLocaleString()}</Text>
-                      </View>
-                      <View style={styles.swapStat}>
-                        <Text style={styles.swapStatLabel}>Fee</Text>
-                        <Text style={styles.swapStatValue}>{(pool.fee * 100).toFixed(2)}%</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.swapButton}
-                      onPress={() => handleLiquidityPress(pool)}
-                    >
-                      <Text style={styles.swapButtonText}>Add Liquidity</Text>
-                    </TouchableOpacity>
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+
       </View>
       <DepositModal
         visible={showDepositModal}
@@ -412,16 +302,7 @@ export function HomeScreen() {
         visible={showConnectWalletAlert}
         onDismiss={() => setShowConnectWalletAlert(false)}
       />
-      <LiquidityDepositModal
-        visible={showLiquidityModal}
-        pool={selectedPool}
-        onClose={() => {
-          setShowLiquidityModal(false);
-          setSelectedPool(null);
-        }}
-        onDeposit={handleLiquidityDeposit}
-        loading={depositingLiquidity}
-      />
+
 
     </ScrollView>
   );
