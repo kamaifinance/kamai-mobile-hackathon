@@ -51,9 +51,14 @@ export default function DepositModal({
     if (pool && tokenAAmount && parseFloat(tokenAAmount) > 0 && !isUpdatingRef.current) {
       isUpdatingRef.current = true;
       const amountA = parseFloat(tokenAAmount);
-      const ratio = pool.tokenBReserve / pool.tokenAReserve;
-      const optimalAmountB = amountA * ratio;
-      setTokenBAmount(optimalAmountB.toFixed(6));
+      
+      // Use real pool reserves for ratio calculation
+      if (pool && pool.tokenAReserve > 0 && pool.tokenBReserve > 0) {
+        const ratio = pool.tokenBReserve / pool.tokenAReserve;
+        const optimalAmountB = amountA * ratio;
+        setTokenBAmount(optimalAmountB.toFixed(6));
+      }
+      
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 100);
@@ -65,9 +70,14 @@ export default function DepositModal({
     if (pool && tokenBAmount && parseFloat(tokenBAmount) > 0 && !isUpdatingRef.current) {
       isUpdatingRef.current = true;
       const amountB = parseFloat(tokenBAmount);
-      const ratio = pool.tokenAReserve / pool.tokenBReserve;
-      const optimalAmountA = amountB * ratio;
-      setTokenAAmount(optimalAmountA.toFixed(6));
+      
+      // Use real pool reserves for ratio calculation
+      if (pool && pool.tokenAReserve > 0 && pool.tokenBReserve > 0) {
+        const ratio = pool.tokenAReserve / pool.tokenBReserve;
+        const optimalAmountA = amountB * ratio;
+        setTokenAAmount(optimalAmountA.toFixed(6));
+      }
+      
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 100);
@@ -124,6 +134,7 @@ export default function DepositModal({
   };
 
   const calculateEstimatedFees = () => {
+    if (!pool) return 0;
     const poolShare = calculatePoolShare();
     return (pool.totalFees24h * poolShare) / 100;
   };
