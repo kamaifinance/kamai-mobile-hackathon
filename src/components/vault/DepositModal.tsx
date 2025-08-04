@@ -104,7 +104,7 @@ export default function DepositModal({
               <View style={styles.handleBar} />
               
               {/* Title */}
-              <Text style={styles.title}>Deposit to Vault</Text>
+              <Text style={styles.title}>Deposit to LSTs Vault</Text>
 
               {/* Vault Information Card */}
               {vault && (
@@ -118,7 +118,7 @@ export default function DepositModal({
                       <View style={styles.vaultHeader}>
                         <Text style={styles.vaultName}>{getVaultType(vault.tokenSymbol)}</Text>
                         <View style={styles.vaultBadge}>
-                          <Text style={styles.vaultSymbol}>{vault.tokenSymbol}</Text>
+                          <Text style={styles.vaultSymbol}>DEVNET</Text>
                         </View>
                       </View>
                       {vault.apy && (

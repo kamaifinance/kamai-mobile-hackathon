@@ -2,7 +2,8 @@ import { useAuthorization, APP_IDENTITY } from '../utils/useAuthorization';
 import { 
   depositToVault, 
   getVaults, 
-  getUserVaultBalance
+  getUserVaultBalance,
+  withdrawFromVault
 } from '../utils/vaultService';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -52,6 +53,22 @@ export const useVaultService = () => {
     return signature;
   };
 
+  // Withdraw from the selected vault
+  const withdrawFromVaultService = async (amount: number, vaultType: string = 'SOL'): Promise<string> => {
+    console.log('Starting withdrawal process');
+    console.log('Amount:', amount);
+    console.log('Vault type:', vaultType);
+    if (!selectedAccount) {
+      throw new Error('No account selected. Please connect your wallet.');
+    }
+    const {
+      transaction,
+      minContextSlot
+    } = await withdrawFromVault(selectedAccount.publicKey, amount, vaultType);
+    const signature = await signAndSendTransaction(transaction, minContextSlot);
+    return signature;
+  };
+
   // Get user's vault balance
   const getUserVaultBalanceService = async (vaultType: string = 'SOL'): Promise<UserVaultBalance> => {
     if (!selectedAccount) {
@@ -96,6 +113,7 @@ export const useVaultService = () => {
 
   return {
     depositToVault: depositToVaultService,
+    withdrawFromVault: withdrawFromVaultService,
     getVaults,
     getUserVaultBalance: getUserVaultBalanceService,
     testWallet

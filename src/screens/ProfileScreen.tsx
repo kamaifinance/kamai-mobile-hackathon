@@ -66,10 +66,6 @@ export function ProfileScreen() {
     loadUserData();
   };
 
-  const handleTermsConditions = () => {
-    console.log('Navigate to Terms & Conditions');
-    // TODO: Implement terms and conditions navigation
-  };
 
   const handleLogOut = async () => {
     try {
@@ -294,26 +290,6 @@ export function ProfileScreen() {
               />
             </TouchableOpacity>
 
-            {/* Terms & Conditions */}
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={handleTermsConditions}
-            >
-              <View style={styles.menuLeft}>
-                 <Image 
-                    source={require('../../assets/terms_and_conditions.png')}
-                    style={{ width: 32, height: 32 }}
-                    resizeMode="contain"
-                  />
-                
-                <Text style={styles.menuText}>Terms & Conditions</Text>
-              </View>
-              <MaterialCommunityIcon 
-                name="chevron-right" 
-                size={20} 
-                color="#666" 
-              />
-            </TouchableOpacity>
 
             {/* Log Out */}
             {selectedAccount && (

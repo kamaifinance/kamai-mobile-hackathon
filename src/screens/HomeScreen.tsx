@@ -234,10 +234,7 @@ export function HomeScreen() {
             const usdValue = withdrawableAmount * solPrice;
             
             return (
-              <TouchableOpacity
-                key={vault.tokenSymbol}
-                onPress={() => handleDeposit(vault)}
-              >
+              <View key={vault.tokenSymbol}>
                 <Card style={[
                   styles.investmentCard, 
                   styles.boostedCard
@@ -270,18 +267,54 @@ export function HomeScreen() {
                         </View>
                         <Text style={styles.apyCardLabel}>APY</Text>
                       </View>
+
+                      {/* Action Buttons */}
+                      <View style={styles.actionButtonsContainer}>
+                        {hasBalance && (
+                          <TouchableOpacity
+                            style={[
+                              styles.actionButton, 
+                              styles.withdrawButton,
+                              (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
+                            ]}
+                            onPress={() => handleWithdraw(vault)}
+                            disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
+                          >
+                            {withdrawing === vault.tokenSymbol ? (
+                              <ActivityIndicator color="#FFFFFF" size="small" />
+                            ) : (
+                              <Text style={styles.withdrawButtonText}>Withdraw</Text>
+                            )}
+                          </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                          style={[
+                            styles.actionButton, 
+                            styles.depositButton,
+                            (depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol) && styles.disabledActionButton
+                          ]}
+                          disabled={depositing === vault.tokenSymbol || withdrawing === vault.tokenSymbol}
+                        >
+                          {depositing === vault.tokenSymbol ? (
+                            <ActivityIndicator color="#FFFFFF" size="small" />
+                          ) : (
+                            <Text style={styles.depositButtonText}>Deposit</Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
                       
                       {/* DEVNET Chip */}
-                      <View style={styles.devnetChipContainer}>
+                      {/* <View style={styles.devnetChipContainer}>
                         <View style={styles.devnetChip}>
                           <Text style={styles.devnetChipText}>DEVNET</Text>
                         </View>
                         <Text style={styles.devnetNote}>Mainnet will have better APYs</Text>
-                      </View>
+                      </View> */}
                     </Card.Content>
                   </ImageBackground>
                 </Card>
-              </TouchableOpacity>
+              </View>
             );
           })}
         </ScrollView>
@@ -957,5 +990,39 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.7,
     textAlign: 'center',
+  },
+  // Action Button Styles
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    marginTop: 16,
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 40,
+  },
+  depositButton: {
+    backgroundColor: '#4CAF50', // Green
+  },
+  withdrawButton: {
+    backgroundColor: '#F44336', // Red
+  },
+  depositButtonText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+  },
+  withdrawButtonText: {
+    fontSize: 14,
+    fontFamily: FontFamilies.Geist.Bold,
+    color: '#FFFFFF',
+  },
+  disabledActionButton: {
+    opacity: 0.5,
   },
 });

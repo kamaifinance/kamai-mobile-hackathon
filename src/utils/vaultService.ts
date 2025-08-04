@@ -670,6 +670,89 @@ export const depositToVault = async (
   }
 };
 
+export const withdrawFromVault = async (
+  publicKey: PublicKey,
+  amount: number,
+  vaultType: string = 'SOL'
+): Promise<any> => {
+  try {
+    console.log('Starting vault withdrawal process...');
+    console.log('Withdrawal amount:', amount);
+    console.log('Vault type:', vaultType);
+    console.log('Public key:', publicKey.toString());
+
+    // Validate amount
+    if (!amount || amount <= 0) {
+      throw new Error('Invalid withdrawal amount. Amount must be greater than 0.');
+    }
+
+    // Only support SOL vault
+    if (vaultType.toUpperCase() !== 'SOL') {
+      throw new Error('Only SOL vault is supported');
+    }
+
+    // Get token info for SOL
+    console.log('Resolving token list...');
+    let tokenMap, tokenInfo;
+    try {
+      tokenMap = new StaticTokenListResolutionStrategy().resolve();
+      tokenInfo = tokenMap.find(token => token.symbol === 'SOL');
+
+      if (!tokenInfo) {
+        throw new Error('SOL token info not found in token registry');
+      }
+
+      console.log('SOL token address:', tokenInfo.address);
+    } catch (tokenError: any) {
+      console.error('Token resolution failed:', tokenError);
+      throw new Error(`Failed to resolve SOL token info: ${tokenError?.message || 'Unknown token error'}`);
+    }
+
+    // Create vault instance
+    console.log('Creating SOL vault instance...');
+    console.log('Using token address:', tokenInfo.address);
+    
+    let vault;
+    try {
+      vault = await getVault(new PublicKey(tokenInfo.address));
+      console.log('Vault created successfully');
+      
+      // Check if vault is properly initialized
+      const vaultSupply = await vault.getVaultSupply();
+      const withdrawableAmount = await vault.getWithdrawableAmount();
+      console.log('Vault info:', {
+        supply: vaultSupply.toString(),
+        withdrawableAmount: withdrawableAmount.toString()
+      });
+      
+    } catch (vaultError: any) {
+      console.error('Vault creation failed:', vaultError);
+      throw new Error(`Failed to create vault: ${vaultError?.message || 'Unknown vault error'}`);
+    }
+
+    // Calculate withdrawal amount in smallest units based on token decimals
+    const decimals = tokenInfo.decimals || 9;
+    const withdrawalAmount = new BN(Math.floor(amount * Math.pow(10, decimals)));
+    console.log('Withdrawal amount in smallest units:', withdrawalAmount.toString());
+    
+    if (withdrawalAmount.isZero()) {
+      throw new Error(`Withdrawal amount too small. Minimum withdrawal is ${1 / Math.pow(10, decimals)} SOL.`);
+    }
+    
+    const withdrawTx = await vault.withdraw(publicKey, withdrawalAmount);
+    console.log('Withdraw transaction built successfully');
+    
+    return {
+      transaction: withdrawTx,
+      minContextSlot: await connection.getSlot()
+    };
+
+  } catch (error: any) {
+    console.log('Detailed error in withdrawFromVault:', error);
+    throw error;
+  }
+};
+
 /**
  * Filter and log tokens with SOL or USD in their symbol or name
  * This function will test creating VaultImpl instances for each token and only log successful ones
